@@ -25,20 +25,112 @@ export class ImageUtils {
       console.log('📤 Starting image upload to cloud storage...');
       console.log('📋 Image URI type:', localUri.substring(0, 20) + '...');
       
-      // For base64 images from web picker, we need to upload to get a public URL
-      if (localUri.startsWith('data:')) {
-        console.log('🌐 Uploading base64 image to get public URL...');
+      // For file URIs from mobile devices, we need to read and upload the file
+      if (localUri.startsWith('file://') || localUri.startsWith('content://')) {
+        console.log('📁 Mobile file URI detected, uploading to public cloud storage');
         
-        // Extract base64 data
-        const base64Data = localUri.split(',')[1];
-        const mimeType = localUri.match(/data:([^;]+)/)?.[1] || 'image/jpeg';
-        
-        // Simple upload to a free image hosting service (for demo)
-        // In production, use Cloudinary, AWS S3, etc.
         try {
-          const formData = new FormData();
+          console.log('☁️ Uploading to free image hosting service...');
           
-          // Convert base64 to blob
+          // Create FormData for mobile file upload
+          const formData = new FormData();
+          formData.append('file', {
+            uri: localUri,
+            type: 'image/jpeg',
+            name: 'image.jpg',
+          } as any);
+
+          // Try uploading to file.io (free temporary file hosting)
+          try {
+            const response = await fetch('https://file.io/', {
+              method: 'POST',
+              body: formData,
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+            });
+
+            if (response.ok) {
+              const responseText = await response.text();
+              console.log('📋 File.io raw response length:', responseText.length);
+              
+              try {
+                const result = JSON.parse(responseText);
+                console.log('📋 File.io parsed response:', result);
+                
+                if (result.success && result.link) {
+                  console.log('✅ Image uploaded successfully to public URL:', result.link);
+                  return {
+                    success: true,
+                    url: result.link,
+                  };
+                }
+              } catch (parseError) {
+                console.log('❌ File.io returned non-JSON response (likely HTML error page)');
+                console.log('📋 Response preview:', responseText.substring(0, 200) + '...');
+              }
+            } else {
+              console.log('❌ File.io upload failed with status:', response.status);
+            }
+          } catch (fileioError) {
+            console.log('❌ File.io upload failed:', fileioError);
+          }
+
+          // Alternative: Try uploading to 0x0.st (another free service)
+          try {
+            const response = await fetch('https://0x0.st', {
+              method: 'POST',
+              body: formData,
+            });
+
+            if (response.ok) {
+              const publicUrl = await response.text();
+              if (publicUrl && publicUrl.startsWith('https://')) {
+                console.log('✅ Image uploaded successfully to 0x0.st:', publicUrl.trim());
+                return {
+                  success: true,
+                  url: publicUrl.trim(),
+                };
+              }
+            }
+          } catch (zeroError) {
+            console.log('❌ 0x0.st upload failed:', zeroError);
+          }
+
+          // If all cloud uploads fail, read as base64 (fallback)
+          console.log('⚠️ All cloud uploads failed, falling back to base64');
+          const base64 = await FileSystem.readAsStringAsync(localUri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          
+          const dataUrl = `data:image/jpeg;base64,${base64}`;
+          console.log('📋 Created data URL fallback, length:', dataUrl.length);
+          console.log('⚠️ Using base64 data URL (Replicate may not accept this)');
+          
+          return {
+            success: true,
+            url: dataUrl,
+          };
+          
+        } catch (error) {
+          console.error('❌ Error processing mobile file:', error);
+          return {
+            success: false,
+            error: 'Failed to process image file: ' + (error instanceof Error ? error.message : 'Unknown error'),
+          };
+        }
+      }
+      
+      // For base64 data URLs, try to upload to get a public URL
+      if (localUri.startsWith('data:')) {
+        console.log('🌐 Converting base64 to public URL...');
+        
+        try {
+          // Extract base64 data
+          const base64Data = localUri.split(',')[1];
+          const mimeType = localUri.match(/data:([^;]+)/)?.[1] || 'image/jpeg';
+          
+          // Convert base64 to blob for upload
           const byteCharacters = atob(base64Data);
           const byteNumbers = new Array(byteCharacters.length);
           for (let i = 0; i < byteCharacters.length; i++) {
@@ -47,70 +139,35 @@ export class ImageUtils {
           const byteArray = new Uint8Array(byteNumbers);
           const blob = new Blob([byteArray], { type: mimeType });
           
-          formData.append('image', blob, 'uploaded-image.jpg');
+          const formData = new FormData();
+          formData.append('file', blob, 'upload.jpg');
           
-          // Upload to imgbb (free image hosting)
-          const response = await fetch('https://api.imgbb.com/1/upload?key=demo', {
+          // Try file.io for base64 uploads too
+          const response = await fetch('https://file.io/', {
             method: 'POST',
             body: formData,
           });
-          
+
           if (response.ok) {
             const result = await response.json();
-            if (result.data?.url) {
-              console.log('✅ Real upload successful:', result.data.url);
+            if (result.success && result.link) {
+              console.log('✅ Base64 uploaded successfully:', result.link);
               return {
                 success: true,
-                url: result.data.url,
+                url: result.link,
               };
             }
           }
         } catch (uploadError) {
-          console.log('⚠️ Upload service failed, using fallback...');
+          console.log('⚠️ Base64 upload failed, using original:', uploadError);
         }
         
-        // Fallback: For demo purposes, we'll simulate the upload and use the original base64
-        // In production, you MUST use a real cloud storage service
-        console.log('🎭 Using base64 fallback for demo (real API may not accept this)');
+        // Fallback to original base64
+        console.log('🎭 Using base64 fallback (Replicate may not accept this)');
         return {
           success: true,
-          url: localUri, // Pass through base64 - Replicate might accept it
+          url: localUri,
         };
-      }
-      
-      // For file URIs from mobile devices, we need to read and upload the file
-      if (localUri.startsWith('file://') || localUri.startsWith('content://')) {
-        console.log('📁 Mobile file URI detected, need to upload to cloud storage');
-        
-        try {
-          // Read the file as base64
-          const base64 = await FileSystem.readAsStringAsync(localUri, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-          
-          console.log('📖 File read successfully, size:', base64.length, 'characters');
-          
-          // For React Native, we'll work with the base64 data directly
-          // Create a data URL that can be used with the Replicate API
-          const dataUrl = `data:image/jpeg;base64,${base64}`;
-          console.log('📋 Created data URL, length:', dataUrl.length);
-          
-          // Try to upload to a simple image hosting service if possible
-          // For now, we'll pass the data URL to Replicate (they might support it)
-          console.log('✅ Using data URL for mobile image (React Native compatible)');
-          
-          return {
-            success: true,
-            url: dataUrl,
-          };
-          
-        } catch (fileError) {
-          console.error('❌ Error reading mobile file:', fileError);
-          return {
-            success: false,
-            error: 'Failed to read image file: ' + (fileError instanceof Error ? fileError.message : 'Unknown error'),
-          };
-        }
       }
       
       // For http/https URLs, return as-is

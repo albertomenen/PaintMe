@@ -61,7 +61,7 @@ export default function RootLayout() {
           // Authenticated screens
           <>
             <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="+not-found" />
+        <Stack.Screen name="+not-found" />
           </>
         ) : (
           // Authentication screens  

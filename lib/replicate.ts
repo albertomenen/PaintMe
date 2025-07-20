@@ -1,8 +1,9 @@
-import { ARTIST_STYLES, ArtistStyle, Config } from '@/constants/Config';
+import { ArtistStyle } from '@/constants/Config';
 import Replicate from 'replicate';
 
+// This tells the Replicate client to use your specific API token.
 const replicate = new Replicate({
-  auth: Config.REPLICATE_API_TOKEN,
+  auth: process.env.EXPO_PUBLIC_REPLICATE_API_TOKEN,
 });
 
 export interface TransformationOptions {
@@ -66,166 +67,107 @@ async function mockTransformation(inputImageUrl: string, artistStyle: ArtistStyl
 }
 
 export class ReplicateService {
-  static async transformImage({
-    inputImageUrl,
-    artistStyle,
-    outputFormat = 'jpg'
-  }: TransformationOptions): Promise<TransformationResult> {
-    
+  /**
+   * Transform image using Replicate API (real AI transformation)
+   */
+  static async transformImage(inputImageUrl: string, artistStyle: string): Promise<{ success: boolean; imageUrl?: string; error?: string }> {
     if (USE_MOCK_MODE) {
-      return await mockTransformation(inputImageUrl, artistStyle);
+      console.log('🎭 Using MOCK transformation (API disabled)');
+      return await this.mockTransformation(inputImageUrl, artistStyle);
     }
 
     try {
-      const artistConfig = ARTIST_STYLES[artistStyle];
-      
-      // Check if we're trying to use a data URL with the real API
-      if (inputImageUrl.startsWith('data:')) {
-        console.log('⚠️ Data URL detected with real API - this may not work');
-        console.log('💡 Replicate API typically requires public HTTP URLs');
-      }
-      
-      // Prepare input for flux-kontext-pro model
+      console.log('🚀 Starting REAL AI transformation with Replicate...');
+      console.log('🎨 Artist style:', artistStyle);
+
+      // This input structure matches the model's schema exactly.
       const input = {
-        prompt: artistConfig.prompt,
+        prompt: this.getPromptForArtist(artistStyle),
         input_image: inputImageUrl,
         aspect_ratio: "match_input_image",
-        output_format: outputFormat,
+        output_format: "jpg",
         safety_tolerance: 2,
         prompt_upsampling: true
       };
 
-      console.log('🚀 Starting REAL AI transformation with Replicate...');
-      console.log('🎨 Artist style:', artistStyle);
-      console.log('📋 Input URL type:', inputImageUrl.startsWith('data:') ? 'Data URL' : 'HTTP URL');
-      
-      // Call the real Replicate API
-      const output = await replicate.run("black-forest-labs/flux-kontext-pro", { input });
+      // STEP 1: Create the prediction. This matches the 'Access a prediction' section.
+      console.log('📤 Creating prediction job...');
+      let prediction = await replicate.predictions.create({
+        // Use the model name directly, as per the documentation.
+        // The library will automatically use the latest version.
+        model: "black-forest-labs/flux-kontext-pro",
+        input: input,
+      });
 
-      console.log('📤 Replicate API response received');
-      console.log('🔍 Response type:', typeof output);
-      console.log('📋 Response structure:', JSON.stringify(output, null, 2));
-      console.log('🔍 Response keys:', Object.keys(output || {}));
-      console.log('🔍 Is Array?', Array.isArray(output));
-      
-              // Handle the correct Replicate API response format
-        if (output) {
-          console.log('✅ Output exists, checking format...');
-          
-          // If it's a string (direct URL), use it
-          if (typeof output === 'string') {
-            console.log('✅ Received direct URL from Replicate API');
-            return {
-              success: true,
-              imageUrl: output,
-            };
-          }
-          
-          // If it's an array, take the first element
-          if (Array.isArray(output)) {
-            console.log('📋 Response is an array, length:', output.length);
-            if (output.length > 0 && typeof output[0] === 'string') {
-              console.log('✅ Taking first URL from array:', output[0]);
-              return {
-                success: true,
-                imageUrl: output[0],
-              };
-            }
-          }
-          
-          // If it's an object with the full response structure
-          if (typeof output === 'object' && output !== null && !Array.isArray(output)) {
-            console.log('📋 Response is an object, checking properties...');
-            const response = output as any;
-            
-            // Check if we have the expected response structure
-            if (response.output && typeof response.output === 'string') {
-              console.log('✅ Real AI transformation successful!');
-              console.log('🎨 Result URL:', response.output);
-              console.log('📊 Status:', response.status);
-              console.log('⏱️ Processing time:', response.metrics?.predict_time, 'seconds');
-              
-              return {
-                success: true,
-                imageUrl: response.output,
-                predictionId: response.id,
-              };
-            }
-            
-            // Maybe the URL is directly in the object, not nested
-            if (response.url && typeof response.url === 'string') {
-              console.log('✅ Found URL property:', response.url);
-              return {
-                success: true,
-                imageUrl: response.url,
-              };
-            }
-            
-            // Check if transformation is still processing
-            if (response.status === 'processing' || response.status === 'starting') {
-              console.log('⏳ Transformation still processing...');
-              return {
-                success: false,
-                error: 'Transformation is still processing. Please try again in a moment.',
-              };
-            }
-            
-            // Check for errors in the response
-            if (response.error) {
-              console.log('❌ Replicate API returned error:', response.error);
-              return {
-                success: false,
-                error: `Replicate API error: ${response.error}`,
-              };
-            }
-            
-            // If status is failed
-            if (response.status === 'failed') {
-              console.log('❌ Transformation failed on Replicate side');
-              return {
-                success: false,
-                error: 'Image transformation failed. Please try again.',
-              };
-            }
-            
-            console.log('❌ Object exists but no recognized properties found');
-            console.log('🔍 Available properties:', Object.keys(response));
-          }
+      console.log(`⏳ Prediction created with ID: ${prediction.id}. Waiting for completion...`);
+
+      // STEP 2: Wait for the prediction to finish, as per the 'Prediction lifecycle' docs.
+      prediction = await replicate.wait(prediction, {
+        // Optional: Add a webhook here if needed in the future
+      });
+
+      console.log('📦 Prediction finished. Final status:', prediction.status);
+
+      // STEP 3: Handle the final result object.
+      if (prediction.status === 'succeeded') {
+        const imageUrl = prediction.output as string;
+        if (imageUrl && typeof imageUrl === 'string' && imageUrl.startsWith('http')) {
+          console.log('✅ Real AI transformation successful!');
+          console.log('🔗 Final URL:', imageUrl);
+          return { success: true, imageUrl: imageUrl };
         } else {
-          console.log('❌ No output received from Replicate API');
+           // This handles cases where the model succeeds but output is unexpected.
+           console.error('❌ Prediction succeeded but output is not a valid URL:', prediction.output);
+           throw new Error('Prediction succeeded but the output was not a valid image URL.');
         }
-
-      console.log('❌ Unexpected response format from Replicate API');
-      return {
-        success: false,
-        error: 'Unexpected response format from Replicate API',
-      };
-    } catch (error) {
-      console.error('❌ Error with real Replicate API:', error);
-      
-      // Check for specific error types
-      if (error instanceof Error) {
-        // CORS error
-        if (error.message.includes('fetch') || 
-            error.message.includes('CORS') ||
-            error.message.includes('network')) {
-          console.log('⚠️ CORS error detected - normal in web browsers');
-          console.log('💡 Real API works on mobile devices without CORS issues');
-        }
-        
-        // Data URL error  
-        if (error.message.includes('400') || 
-            error.message.includes('Bad Request') ||
-            inputImageUrl.startsWith('data:')) {
-          console.log('⚠️ Data URL may not be supported by Replicate API');
-          console.log('💡 Need to upload image to public URL (AWS S3, Cloudinary, etc.)');
-        }
+      } else {
+        // The prediction failed or was canceled.
+        const errorMessage = prediction.error ? JSON.stringify(prediction.error) : 'Prediction did not succeed.';
+        console.error('❌ Prediction failed. Error:', errorMessage);
+        throw new Error(errorMessage);
       }
+
+    } catch (error) {
+      console.error('❌ Top-level error during Replicate API call:');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorName = error instanceof Error ? error.name : 'Unknown';
+      console.error('Error message:', errorMessage);
+      console.error('Error name:', errorName);
       
       console.log('🔄 Falling back to return your original image...');
-      // Use user's actual image as fallback instead of random images
-      return await mockTransformation(inputImageUrl, artistStyle);
+      return await this.mockTransformation(inputImageUrl, artistStyle);
     }
+  }
+
+  /**
+   * Get AI prompt for the specified artist style
+   */
+  static getPromptForArtist(artistStyle: string): string {
+    const prompts = {
+      caravaggio: "Transform this into a Caravaggio painting with dramatic chiaroscuro lighting, intense shadows and highlights, baroque realism, deep emotional expression, and masterful use of light and dark contrasts",
+      velazquez: "Transform this into a Velázquez painting with royal court style, sophisticated realism, subtle atmospheric perspective, soft diffused lighting, muted color palette, Spanish Golden Age technique, fine brushwork, and elegant composition",
+      goya: "Transform this into a Goya painting with bold brushstrokes, dramatic expressions, dark romanticism, expressive colors, psychological depth, and the distinctive style of Spanish romantic art"
+    };
+    
+    return prompts[artistStyle as keyof typeof prompts] || prompts.caravaggio;
+  }
+
+  /**
+   * Mock transformation for fallback/testing
+   */
+  static async mockTransformation(inputImageUrl: string, artistStyle: string): Promise<{ success: boolean; imageUrl?: string; error?: string }> {
+    console.log('🎭 Using MOCK transformation (fallback mode)');
+    console.log('📸 Input:', inputImageUrl.substring(0, 50) + '...');
+    console.log('🎨 Style:', artistStyle);
+    
+    // Return the original image as fallback
+    console.log('✅ MOCK transformation complete: Using user\'s original image');
+    console.log('ℹ️  Note: This is a fallback - enable real API for actual AI transformation');
+    
+    return {
+      success: true,
+      imageUrl: inputImageUrl, // Return original image
+    };
   }
 
   /**
