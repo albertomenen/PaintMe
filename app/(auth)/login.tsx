@@ -6,16 +6,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Dimensions,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import { supabase } from '@/lib/supabase';
@@ -103,7 +103,10 @@ export default function LoginScreen() {
                 colors={['#FFD700', '#FFA500', '#FF6347']}
                 style={styles.logoGradient}
               >
-                <Ionicons name="brush" size={32} color="white" />
+                <Image
+                  source={require('../../assets/images/appstore.png')}
+                  style={styles.logoImage}
+                />
               </LinearGradient>
             </View>
             <Text style={styles.title}>PaintMe</Text>
@@ -198,7 +201,7 @@ export default function LoginScreen() {
 
               {/* Sign Up Link */}
               <View style={styles.signupContainer}>
-                <Text style={styles.signupText}>Don't have an account? </Text>
+                <Text style={styles.signupText}>Don&apos;t have an account? </Text>
                 <Link href="/(auth)/signup" asChild>
                   <TouchableOpacity>
                     <Text style={styles.signupLink}>Sign Up</Text>
@@ -256,6 +259,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 10,
+  },
+  logoImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   title: {
     fontSize: 32,
