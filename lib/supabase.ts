@@ -28,6 +28,7 @@ export type Database = {
           id: string;
           email: string;
           credits: number;
+          image_generations_remaining: number;
           created_at: string;
           updated_at: string;
         };
@@ -35,6 +36,7 @@ export type Database = {
           id?: string;
           email: string;
           credits?: number;
+          image_generations_remaining?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -42,6 +44,7 @@ export type Database = {
           id?: string;
           email?: string;
           credits?: number;
+          image_generations_remaining?: number;
           updated_at?: string;
         };
       };

@@ -26,19 +26,13 @@ const USE_MOCK_MODE = false; // Real API enabled - will transform actual user ph
 // Mock images for development (only used when USE_MOCK_MODE is true)
 const MOCK_RESULTS = {
   caravaggio: [
-    'https://images.unsplash.com/photo-1578321272176-b7bbc0679853?w=800&h=800&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=800&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=800&h=800&fit=crop&q=80'
+    
   ],
   velazquez: [
-    'https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=800&h=800&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&h=800&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1564564321837-a57b7070ac4f?w=800&h=800&fit=crop&q=80'
+    
   ],
   goya: [
-    'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=800&fit=crop&q=80&auto=format',
-    'https://images.unsplash.com/photo-1578321272176-b7bbc0679853?w=800&h=800&fit=crop&q=80&auto=format',
-    'https://images.unsplash.com/photo-1569913486515-b74bf7751574?w=800&h=800&fit=crop&q=80&auto=format'
+    
   ]
 };
 

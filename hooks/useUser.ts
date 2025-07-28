@@ -6,6 +6,7 @@ export interface User {
   id: string;
   email: string;
   credits: number;
+  imageGenerationsRemaining: number;
   totalTransformations: number;
   favoriteArtist?: string;
   createdAt: string;
@@ -16,6 +17,7 @@ export interface Transformation {
   id: string;
   userId: string;
   originalImageUrl: string;
+  imageGenerationsRemaining: number;
   transformedImageUrl?: string;
   artistStyle: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
@@ -27,6 +29,7 @@ export function useUser() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [transformations, setTransformations] = useState<Transformation[]>([]);
+  const [imageGenerationsRemaining, setImageGenerationsRemaining] = useState(0);
 
   useEffect(() => {
     // Get initial session
@@ -53,6 +56,7 @@ export function useUser() {
 
     return () => subscription.unsubscribe();
   }, []);
+  
 
   const loadUserProfile = async (authUser: SupabaseUser) => {
     try {
