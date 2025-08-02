@@ -12,7 +12,15 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.menensito.PaintMe",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSExceptionDomains": {
+            "vvzxthzeuqhwasortjhc.supabase.co": {
+              "NSIncludesSubdomains": true,
+              "NSExceptionAllowsInsecureHTTPLoads": true
+            }
+          }
+        }
       }
     },
     "android": {
