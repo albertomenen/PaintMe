@@ -1,8 +1,8 @@
 export const Config = {
   REPLICATE_API_TOKEN: process.env.EXPO_PUBLIC_REPLICATE_API_TOKEN || 'r8_LcGPhYyycC6TH0ZEs0TUp4NAvfGepH51olaSW',
-  SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://vvzxthzeuqhwasortjhc.supabase.co',
-  SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2enh0aHpldXFod2Fzb3J0amhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MzMwMzQsImV4cCI6MjA2ODQwOTAzNH0.hf6FtjbPKoKh7cffZpB04yg3q-LKgUgF-HDcnGXesyk',
-  STRIPE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'your_stripe_publishable_key_here',
+  SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL ,
+  SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ,
+  STRIPE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY 
 };
 
 // Debug logging (remove in production)
@@ -11,6 +11,7 @@ if (__DEV__) {
     SUPABASE_URL: Config.SUPABASE_URL,
     SUPABASE_ANON_KEY: Config.SUPABASE_ANON_KEY ? `${Config.SUPABASE_ANON_KEY.substring(0, 20)}...` : 'NOT SET',
     REPLICATE_TOKEN: Config.REPLICATE_API_TOKEN ? `${Config.REPLICATE_API_TOKEN.substring(0, 10)}...` : 'NOT SET',
+    STRIPE_PUBLISHABLE_KEY: Config.STRIPE_PUBLISHABLE_KEY ? `${Config.STRIPE_PUBLISHABLE_KEY.substring(0, 10)}...` : 'NOT SET',
   });
 }
 

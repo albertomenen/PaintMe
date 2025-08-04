@@ -12,6 +12,7 @@ import {
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth, useUser } from '@/hooks/useUser';
+import { StripeService } from '@/lib/stripe';
 
 export default function ProfileScreen() {
   const { user, updateCredits, addImageGenerations, transformations } = useUser();
@@ -59,17 +60,28 @@ export default function ProfileScreen() {
           {
             text: 'Purchase',
             onPress: async () => {
-              // Simulate successful purchase
+              // Real Stripe purchase
               if (user) {
-                console.log('💳 Starting purchase of', credits, 'generations');
-                await addImageGenerations(credits);
-                console.log('💳 Purchase completed, user now has:', user.imageGenerationsRemaining);
-                Alert.alert('¡Éxito!', `${credits} generaciones añadidas a tu cuenta!`);
-                
-                // Force component re-render
-                setIsLoading(false);
+                console.log('💳 Starting Stripe purchase of', credits, 'generations');
                 setIsLoading(true);
-                setTimeout(() => setIsLoading(false), 100);
+                
+                try {
+                  const result = await StripeService.purchaseCredits(creditPackage);
+                  
+                  if (result.success) {
+                    console.log('💳 Stripe payment successful!');
+                    await addImageGenerations(credits);
+                    Alert.alert('¡Pago exitoso!', `${credits} generaciones añadidas a tu cuenta!`);
+                  } else {
+                    console.error('💳 Stripe payment failed:', result.error);
+                    Alert.alert('Error de pago', result.error || 'El pago no se pudo procesar');
+                  }
+                } catch (error) {
+                  console.error('💳 Purchase error:', error);
+                  Alert.alert('Error', 'Hubo un problema procesando el pago');
+                } finally {
+                  setIsLoading(false);
+                }
               }
             }
           }

@@ -152,7 +152,7 @@ export function useUser() {
 
       setTransformations(transformationsList);
     } catch (error) {
-      console.error('Error loading transformations:', error);
+      
     }
   };
 
