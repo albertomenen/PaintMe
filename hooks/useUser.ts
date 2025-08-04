@@ -17,7 +17,6 @@ export interface Transformation {
   id: string;
   userId: string;
   originalImageUrl: string;
-  imageGenerationsRemaining: number;
   transformedImageUrl?: string;
   artistStyle: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
@@ -100,6 +99,7 @@ export function useUser() {
         id: profile.id,
         email: profile.email,
         credits: profile.credits,
+        imageGenerationsRemaining: profile.image_generations_remaining || profile.credits || 1,
         totalTransformations: profile.total_transformations,
         favoriteArtist: profile.favorite_artist,
         createdAt: profile.created_at,
@@ -168,6 +168,60 @@ export function useUser() {
       setUser(prev => prev ? { ...prev, credits: newCredits } : null);
     } catch (error) {
       console.error('Error updating credits:', error);
+    }
+  };
+
+  const addImageGenerations = async (amount: number) => {
+    if (!user) return;
+
+    const newTotal = user.imageGenerationsRemaining + amount;
+    
+    // Actualizar en el estado local inmediatamente
+    setUser(prev => prev ? { ...prev, imageGenerationsRemaining: newTotal } : null);
+    console.log('✅ Added generations. New total:', newTotal);
+
+    // Intentar actualizar en la base de datos
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ 
+          image_generations_remaining: newTotal,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        console.log('⚠️ Database update failed, but local state updated');
+      }
+    } catch (error) {
+      console.log('⚠️ Database error, but local state updated');
+    }
+  };
+
+  const decrementImageGenerations = async () => {
+    if (!user || user.imageGenerationsRemaining <= 0) return;
+
+    const newTotal = user.imageGenerationsRemaining - 1;
+    
+    // Actualizar en el estado local inmediatamente
+    setUser(prev => prev ? { ...prev, imageGenerationsRemaining: newTotal } : null);
+    console.log('✅ Decremented generations. New total:', newTotal);
+
+    // Intentar actualizar en la base de datos
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ 
+          image_generations_remaining: newTotal,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        console.log('⚠️ Database update failed, but local state updated');
+      }
+    } catch (error) {
+      console.log('⚠️ Database error, but local state updated');
     }
   };
 
@@ -255,8 +309,8 @@ export function useUser() {
   };
 
   const canTransform = () => {
-    // Users get 1 free transformation, then need to purchase credits
-    return user ? (user.totalTransformations === 0 || user.credits > 0) : false;
+    // Users can transform if they have image generations remaining
+    return user ? user.imageGenerationsRemaining > 0 : false;
   };
 
   return {
@@ -264,6 +318,8 @@ export function useUser() {
     loading,
     transformations,
     updateCredits,
+    addImageGenerations,
+    decrementImageGenerations,
     addTransformation,
     updateTransformation,
     hasCredits,

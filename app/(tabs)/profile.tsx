@@ -2,11 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -14,7 +14,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { useAuth, useUser } from '@/hooks/useUser';
 
 export default function ProfileScreen() {
-  const { user, updateCredits, transformations } = useUser();
+  const { user, updateCredits, addImageGenerations, transformations } = useUser();
   const { signOut } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -48,11 +48,11 @@ export default function ProfileScreen() {
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'Purchase',
-            onPress: () => {
+            onPress: async () => {
               // Simulate successful purchase
               if (user) {
-                updateCredits(user.credits + credits);
-                Alert.alert('Success!', `${credits} credits added to your account!`);
+                await addImageGenerations(credits);
+                Alert.alert('¡Éxito!', `${credits} generaciones añadidas a tu cuenta!`);
               }
             }
           }
@@ -134,13 +134,13 @@ export default function ProfileScreen() {
     </TouchableOpacity>
   );
 
-  const renderProfileSection = (title: string, items: Array<{
+  const renderProfileSection = (title: string, items: {
     icon: string;
     label: string;
     value?: string;
     onPress?: () => void;
     color?: string;
-  }>) => (
+  }[]) => (
     <View style={styles.section}>
       <ThemedText style={styles.sectionTitle}>{title}</ThemedText>
       <View style={styles.sectionContent}>
@@ -190,18 +190,18 @@ export default function ProfileScreen() {
         {/* Credits Section */}
         <View style={styles.creditsSection}>
                   <View style={styles.creditsHeader}>
-          <ThemedText style={styles.creditsTitle}>Your Credits</ThemedText>
+          <ThemedText style={styles.creditsTitle}>Your Transformations</ThemedText>
           <View style={styles.creditsBalance}>
-            <ThemedText style={styles.creditsCount}>{user?.credits || 0}</ThemedText>
-            <ThemedText style={styles.creditsLabel}>transformations left</ThemedText>
+            <ThemedText style={styles.creditsCount}>{user?.imageGenerationsRemaining || 0}</ThemedText>
+            <ThemedText style={styles.creditsLabel}>generaciones restantes</ThemedText>
           </View>
         </View>
         
-        {user && user.credits === 0 && user.totalTransformations > 0 && (
+        {user && user.imageGenerationsRemaining === 0 && user.totalTransformations > 0 && (
           <View style={styles.freeTrialNotice}>
             <Ionicons name="gift" size={24} color="#FF6B6B" />
             <ThemedText style={styles.freeTrialText}>
-              You've used your free transformation! Purchase credits to continue creating masterpieces.
+              Has usado tu generación gratuita! Compra más para seguir creando obras maestras.
             </ThemedText>
           </View>
         )}

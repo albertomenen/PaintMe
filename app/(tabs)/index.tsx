@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -36,7 +37,7 @@ export default function TransformScreen() {
     error: null as string | null,
   });
 
-  const { user, canTransform, addTransformation, updateTransformation, loading } = useUser();
+  const { user, canTransform, addTransformation, updateTransformation, decrementImageGenerations, loading } = useUser();
 
   const requestPermissions = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -123,8 +124,8 @@ export default function TransformScreen() {
       return;
     }
 
-    if (!canTransform()) {
-      Alert.alert('No Credits', 'You need to purchase credits to create more transformations.');
+    if (!user || user.imageGenerationsRemaining <= 0) {
+      Alert.alert('Sin generaciones', 'Necesitas comprar más generaciones para crear transformaciones.');
       return;
     }
 
@@ -176,10 +177,11 @@ export default function TransformScreen() {
           status: 'completed',
           transformedImageUrl: result.imageUrl
         });
-        if (user && user.totalTransformations >= 0) {
-          // No free credits logic
-        }
-        Haptics.notificationAsync(Haptics.NotificationFeedbackStyle.Success);
+        
+        // Decrementar generaciones después de transformación exitosa
+        await decrementImageGenerations();
+        
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
         await updateTransformation(transformation.id, { status: 'failed' });
         Alert.alert('Transformation Failed', result.error || 'The AI failed to transform the image.');
@@ -236,7 +238,7 @@ export default function TransformScreen() {
           setSelectedArtist(artistKey);
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }}>
-        <Image source={{ uri: artist.preview }} style={styles.artistImage} />
+        <Image source={{ uri: artist.sampleImage }} style={styles.artistImage} />
         <View style={styles.artistInfo}>
           <Text style={styles.artistName}>{artist.name}</Text>
         </View>
@@ -293,22 +295,36 @@ export default function TransformScreen() {
         {renderTransformationStatus()}
 
         <View style={styles.artistSelector}>
-          <Text style={styles.sectionTitle}>Choose Your Master's Style</Text>
+          <Text style={styles.sectionTitle}>Choose Your Master&apos;s Style</Text>
           <View style={styles.artistGrid}>
             {Object.keys(ARTIST_STYLES).map(key => renderArtistCard(key as ArtistStyle))}
           </View>
         </View>
 
         <View style={styles.ctaContainer}>
-          <TouchableOpacity
-            style={[styles.transformButton, (!selectedImage || !selectedArtist || isTransforming) && styles.disabledButton]}
-            onPress={transformImage}
-            disabled={!selectedImage || !selectedArtist || isTransforming}>
-            <LinearGradient colors={['#FFD700', '#FFA500']} style={styles.buttonGradient}>
-              {isTransforming && <ActivityIndicator size="small" color="#000" style={{ marginRight: 10 }} />}
-              <Text style={styles.buttonText}>{getTransformButtonText()}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+          {user && user.imageGenerationsRemaining > 0 ? (
+            // Si el usuario tiene créditos, muestra el botón para generar
+            <TouchableOpacity
+              style={[styles.transformButton, (!selectedImage || !selectedArtist || isTransforming) && styles.disabledButton]}
+              onPress={transformImage}
+              disabled={!selectedImage || !selectedArtist || isTransforming}>
+              <LinearGradient colors={['#FFD700', '#FFA500']} style={styles.buttonGradient}>
+                {isTransforming && <ActivityIndicator size="small" color="#000" style={{ marginRight: 10 }} />}
+                <Text style={styles.buttonText}>
+                  {isTransforming ? 'Creando Arte...' : `Generar Imagen (${user.imageGenerationsRemaining} restantes)`}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          ) : (
+            // Si el usuario NO tiene créditos, muestra el botón para comprar
+            <TouchableOpacity
+              style={styles.transformButton}
+              onPress={() => router.push('/(tabs)/profile')}>
+              <LinearGradient colors={['#8e9eab', '#eef2f3']} style={styles.buttonGradient}>
+                <Text style={[styles.buttonText, { color: '#333' }]}>✨ Comprar más créditos</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
