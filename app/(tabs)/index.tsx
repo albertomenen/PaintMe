@@ -37,7 +37,23 @@ export default function TransformScreen() {
     error: null as string | null,
   });
 
-  const { user, canTransform, addTransformation, updateTransformation, decrementImageGenerations, loading } = useUser();
+  const { user, canTransform, addTransformation, updateTransformation, decrementImageGenerations, loading, updateTrigger } = useUser();
+
+  // State to force re-render when user data changes
+  const [, forceUpdate] = React.useReducer(x => x + 1, 0);
+
+  // Monitor user changes and force update
+  React.useEffect(() => {
+    console.log('🔄 Index - User state changed:', {
+      hasUser: !!user,
+      userGenerations: user?.imageGenerationsRemaining,
+      canTransform: canTransform(),
+      loading
+    });
+    
+    // Force re-render when user data changes
+    forceUpdate();
+  }, [user?.imageGenerationsRemaining, user?.id, loading, updateTrigger]);
 
   const requestPermissions = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -311,7 +327,7 @@ export default function TransformScreen() {
               <LinearGradient colors={['#FFD700', '#FFA500']} style={styles.buttonGradient}>
                 {isTransforming && <ActivityIndicator size="small" color="#000" style={{ marginRight: 10 }} />}
                 <Text style={styles.buttonText}>
-                  {isTransforming ? 'Creando Arte...' : `Generar Imagen (${user.imageGenerationsRemaining} restantes)`}
+                  {isTransforming ? 'Creando Arte...' : `Generar Imagen (${user?.imageGenerationsRemaining || 0} restantes)`}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>

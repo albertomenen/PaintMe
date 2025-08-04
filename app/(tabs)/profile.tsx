@@ -15,6 +15,16 @@ import { useAuth, useUser } from '@/hooks/useUser';
 
 export default function ProfileScreen() {
   const { user, updateCredits, addImageGenerations, transformations } = useUser();
+
+  // Monitor user changes in profile
+  React.useEffect(() => {
+    console.log('📊 Profile - User data changed:', {
+      hasUser: !!user,
+      imageGenerationsRemaining: user?.imageGenerationsRemaining,
+      credits: user?.credits,
+      totalTransformations: user?.totalTransformations
+    });
+  }, [user?.imageGenerationsRemaining, user?.credits, user?.totalTransformations]);
   const { signOut } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -51,8 +61,15 @@ export default function ProfileScreen() {
             onPress: async () => {
               // Simulate successful purchase
               if (user) {
+                console.log('💳 Starting purchase of', credits, 'generations');
                 await addImageGenerations(credits);
+                console.log('💳 Purchase completed, user now has:', user.imageGenerationsRemaining);
                 Alert.alert('¡Éxito!', `${credits} generaciones añadidas a tu cuenta!`);
+                
+                // Force component re-render
+                setIsLoading(false);
+                setIsLoading(true);
+                setTimeout(() => setIsLoading(false), 100);
               }
             }
           }

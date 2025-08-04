@@ -29,6 +29,7 @@ export function useUser() {
   const [loading, setLoading] = useState(true);
   const [transformations, setTransformations] = useState<Transformation[]>([]);
   const [imageGenerationsRemaining, setImageGenerationsRemaining] = useState(0);
+  const [updateTrigger, setUpdateTrigger] = useState(0);
 
   useEffect(() => {
     // Get initial session
@@ -94,17 +95,28 @@ export function useUser() {
         return;
       }
 
+      // Debug: Ver qué datos tenemos de la base de datos
+      console.log('🔍 Raw profile data from DB:', {
+        id: profile.id,
+        email: profile.email,
+        credits: profile.credits,
+        image_generations_remaining: profile.image_generations_remaining,
+        total_transformations: profile.total_transformations
+      });
+
       // Convert snake_case to camelCase for our interface
       const userProfile: User = {
         id: profile.id,
         email: profile.email,
         credits: profile.credits,
-        imageGenerationsRemaining: profile.image_generations_remaining || profile.credits || 1,
+        imageGenerationsRemaining: profile.image_generations_remaining ?? 1,
         totalTransformations: profile.total_transformations,
         favoriteArtist: profile.favorite_artist,
         createdAt: profile.created_at,
         updatedAt: profile.updated_at,
       };
+
+      console.log('✅ Profile loaded - imageGenerationsRemaining:', userProfile.imageGenerationsRemaining);
 
       setUser(userProfile);
 
@@ -125,10 +137,6 @@ export function useUser() {
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error loading transformations:', error);
-        return;
-      }
 
       // Convert snake_case to camelCase
       const transformationsList: Transformation[] = data.map(t => ({
@@ -175,26 +183,36 @@ export function useUser() {
     if (!user) return;
 
     const newTotal = user.imageGenerationsRemaining + amount;
+    console.log('🔄 Adding generations:', amount, 'New total will be:', newTotal);
     
-    // Actualizar en el estado local inmediatamente
-    setUser(prev => prev ? { ...prev, imageGenerationsRemaining: newTotal } : null);
-    console.log('✅ Added generations. New total:', newTotal);
-
-    // Intentar actualizar en la base de datos
+    // Intentar actualizar en la base de datos PRIMERO
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('users')
         .update({ 
           image_generations_remaining: newTotal,
           updated_at: new Date().toISOString()
         })
-        .eq('id', user.id);
+        .eq('id', user.id)
+        .select('image_generations_remaining')
+        .single();
 
       if (error) {
-        console.log('⚠️ Database update failed, but local state updated');
+        console.error('❌ Database update failed:', error);
+        return;
       }
+
+      console.log('✅ Database updated successfully. New value:', data.image_generations_remaining);
+      
+      // Actualizar estado local solo si la DB se actualizó correctamente
+      setUser(prev => prev ? { ...prev, imageGenerationsRemaining: data.image_generations_remaining } : null);
+      console.log('✅ Local state updated. Total generations:', data.image_generations_remaining);
+      
+      // Trigger update for all components
+      setUpdateTrigger(prev => prev + 1);
+      
     } catch (error) {
-      console.log('⚠️ Database error, but local state updated');
+      console.error('❌ Database error:', error);
     }
   };
 
@@ -202,26 +220,36 @@ export function useUser() {
     if (!user || user.imageGenerationsRemaining <= 0) return;
 
     const newTotal = user.imageGenerationsRemaining - 1;
+    console.log('🔄 Decrementing generations from', user.imageGenerationsRemaining, 'to', newTotal);
     
-    // Actualizar en el estado local inmediatamente
-    setUser(prev => prev ? { ...prev, imageGenerationsRemaining: newTotal } : null);
-    console.log('✅ Decremented generations. New total:', newTotal);
-
-    // Intentar actualizar en la base de datos
+    // Intentar actualizar en la base de datos PRIMERO
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('users')
         .update({ 
           image_generations_remaining: newTotal,
           updated_at: new Date().toISOString()
         })
-        .eq('id', user.id);
+        .eq('id', user.id)
+        .select('image_generations_remaining')
+        .single();
 
       if (error) {
-        console.log('⚠️ Database update failed, but local state updated');
+        console.error('❌ Database decrement failed:', error);
+        return;
       }
+
+      console.log('✅ Database decremented successfully. New value:', data.image_generations_remaining);
+      
+      // Actualizar estado local solo si la DB se actualizó correctamente
+      setUser(prev => prev ? { ...prev, imageGenerationsRemaining: data.image_generations_remaining } : null);
+      console.log('✅ Local state decremented. Total generations:', data.image_generations_remaining);
+      
+      // Trigger update for all components
+      setUpdateTrigger(prev => prev + 1);
+      
     } catch (error) {
-      console.log('⚠️ Database error, but local state updated');
+      console.error('❌ Database decrement error:', error);
     }
   };
 
@@ -324,6 +352,7 @@ export function useUser() {
     updateTransformation,
     hasCredits,
     canTransform,
+    updateTrigger,
     refreshUser: () => loadUserProfile,
   };
 }
