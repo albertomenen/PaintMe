@@ -1,5 +1,5 @@
 import { Config } from '@/constants/Config';
-import { initStripe, presentPaymentSheet } from '@stripe/stripe-react-native';
+import { initPaymentSheet, initStripe, presentPaymentSheet } from '@stripe/stripe-react-native';
 import { supabase } from './supabase';
 
 // Configurar Stripe cuando se inicie la app
@@ -55,18 +55,39 @@ export class StripeService {
     }
   }
 
-  // Procesar el pago
-  static async processPayment(clientSecret: string): Promise<PaymentResult> {
+  // Inicializar y procesar el pago
+  static async processPayment(clientSecret: string, amount: number): Promise<PaymentResult> {
     try {
-      console.log('💳 Processing payment...');
+      console.log('💳 Initializing payment sheet...');
       
-      const { error } = await presentPaymentSheet();
+      // 1. Primero inicializar el Payment Sheet
+      const { error: initError } = await initPaymentSheet({
+        merchantDisplayName: 'PaintMe',
+        paymentIntentClientSecret: clientSecret,
+        allowsDelayedPaymentMethods: true,
+        defaultBillingDetails: {
+          name: 'Cliente PaintMe',
+        }
+      });
 
-      if (error) {
-        console.error('❌ Payment failed:', error);
+      if (initError) {
+        console.error('❌ Payment sheet init failed:', initError);
         return { 
           success: false, 
-          error: error.message 
+          error: initError.message 
+        };
+      }
+
+      console.log('✅ Payment sheet initialized, presenting...');
+
+      // 2. Luego presentar el Payment Sheet
+      const { error: presentError } = await presentPaymentSheet();
+
+      if (presentError) {
+        console.error('❌ Payment failed:', presentError);
+        return { 
+          success: false, 
+          error: presentError.message 
         };
       }
 
@@ -89,9 +110,9 @@ export class StripeService {
     packageType: 'small' | 'medium' | 'large'
   ): Promise<PaymentResult> {
     const packages = {
-      small: { amount: 499, credits: 5, productId: 'prod_SnylaASvPBtWNG' },
-      medium: { amount: 1299, credits: 15, productId: 'prod_Snymks5fzB9j7v' },
-      large: { amount: 1999, credits: 30, productId: 'prod_SnymhAB2jZIeUO' }
+      small: { amount: 499, credits: 5, productId: 'prod_SnZuznQUreq7y6' },
+      medium: { amount: 1299, credits: 15, productId: 'prod_SnZujyFmt2tNHh' },
+      large: { amount: 1999, credits: 30, productId: 'prod_SnZvwLMzmJw8Y2' }
     };
 
     const selectedPackage = packages[packageType];
@@ -109,7 +130,7 @@ export class StripeService {
       }
 
       // 2. Procesar el pago
-      const paymentResult = await this.processPayment(clientSecret);
+      const paymentResult = await this.processPayment(clientSecret, selectedPackage.amount);
       
       if (paymentResult.success) {
         console.log(`✅ Payment successful! User should receive ${selectedPackage.credits} credits`);

@@ -72,10 +72,7 @@ export default function ProfileScreen() {
                     console.log('💳 Stripe payment successful!');
                     await addImageGenerations(credits);
                     Alert.alert('¡Pago exitoso!', `${credits} generaciones añadidas a tu cuenta!`);
-                  } else {
-                    console.error('💳 Stripe payment failed:', result.error);
-                    Alert.alert('Error de pago', result.error || 'El pago no se pudo procesar');
-                  }
+                  } 
                 } catch (error) {
                   console.error('💳 Purchase error:', error);
                   Alert.alert('Error', 'Hubo un problema procesando el pago');
