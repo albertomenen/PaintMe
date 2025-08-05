@@ -4,9 +4,10 @@
     "slug": "PaintMe",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
     "scheme": "paintme",
+    "assetBundlePatterns": ["**/*"],
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/images/icon.png",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
