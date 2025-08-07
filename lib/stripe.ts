@@ -1,4 +1,4 @@
-import { Config } from '@/constants/Config';
+import { Config } from '../constants/Config'
 import { initPaymentSheet, initStripe, presentPaymentSheet } from '@stripe/stripe-react-native';
 import { supabase } from './supabase';
 

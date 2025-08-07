@@ -1,4 +1,6 @@
-import { initializeStripe } from '@/lib/stripe';
+// Polyfill para TransformStream (necesario para Replicate)
+import 'web-streams-polyfill/polyfill';
+
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -6,9 +8,16 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
+import { initializeStripe } from '../lib/stripe';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { supabase } from '@/lib/supabase';
+import { useColorScheme } from '../hooks/useColorScheme';
+import { supabase } from '../lib/supabase';
+
+// Configurar TransformStream globalmente
+if (typeof global.TransformStream === 'undefined') {
+  const { TransformStream } = require('web-streams-polyfill');
+  global.TransformStream = TransformStream;
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -38,7 +47,16 @@ export default function RootLayout() {
         const authStatus = session ? 'AUTHENTICATED' : 'NOT AUTHENTICATED';
         console.log('🔐 Auth state change:', event, authStatus);
         console.log('📱 Will navigate to:', session ? 'Main App' : 'Login Screen');
-        setIsAuthenticated(!!session);
+        
+        if (event === 'SIGNED_IN' && session) {
+          console.log('✅ User signed in successfully via OAuth');
+          setIsAuthenticated(true);
+        } else if (event === 'SIGNED_OUT') {
+          console.log('🔓 User signed out');
+          setIsAuthenticated(false);
+        } else {
+          setIsAuthenticated(!!session);
+        }
       }
     );
 

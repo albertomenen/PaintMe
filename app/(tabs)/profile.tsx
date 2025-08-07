@@ -1,21 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Alert,
+  Linking,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
 } from 'react-native';
 
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { useAuth, useUser } from '@/hooks/useUser';
-import { StripeService } from '@/lib/stripe';
+import { ThemedText } from '../../components/ThemedText';
+import { ThemedView } from '../../components/ThemedView';
+import { useAuth, useUser } from '../../hooks/useUser';
+import { StripeService } from '../../lib/stripe';
 
 export default function ProfileScreen() {
-  const { user, updateCredits, addImageGenerations, transformations } = useUser();
+  const { user, addImageGenerations, transformations } = useUser();
 
   // Monitor user changes in profile
   React.useEffect(() => {
@@ -91,6 +93,39 @@ export default function ProfileScreen() {
     }
   };
 
+  const openEmailSupport = async () => {
+    const email = 'alberto@notjustvpn.com';
+    const subject = 'PaintMe App Support';
+    const body = 'Hi Alberto,\n\nI need help with the PaintMe app.\n\n';
+    const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Error', 'No email app available. Please email us at: alberto@notjustvpn.com');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Could not open email app. Please contact: alberto@notjustvpn.com');
+    }
+  };
+
+  const openTermsAndPrivacy = async () => {
+    const url = 'https://menendez.dev/terms';
+    
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Error', 'Could not open browser. Please visit: https://menendez.dev/terms');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Could not open link. Please visit: https://menendez.dev/terms');
+    }
+  };
+
   const handleSignOut = async () => {
     Alert.alert(
       'Sign Out',
@@ -110,8 +145,10 @@ export default function ProfileScreen() {
             
             if (result.success) {
               console.log('✅ Sign out successful');
-              // The auth state change will automatically redirect to login
-              // No need to show alert, just let the navigation happen
+              // Redirigir manualmente al login
+              setTimeout(() => {
+                router.replace('/(auth)/login');
+              }, 100);
             } else {
               console.error('❌ Sign out failed:', result.error);
               Alert.alert('Error', result.error || 'Failed to sign out.');
@@ -196,7 +233,7 @@ export default function ProfileScreen() {
   );
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <LinearGradient
         colors={['#667eea', '#764ba2']}
         style={styles.header}
@@ -276,6 +313,12 @@ export default function ProfileScreen() {
           },
         ])}
 
+        {/* Sign Out Button - Prominente */}
+        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+          <Ionicons name="log-out" size={20} color="#FF6B6B" />
+          <ThemedText style={styles.signOutText}>Sign Out</ThemedText>
+        </TouchableOpacity>
+
         {/* Settings */}
         {renderProfileSection('Settings', [
           {
@@ -286,20 +329,14 @@ export default function ProfileScreen() {
           {
             icon: 'help-circle',
             label: 'Help & Support',
-            onPress: () => Alert.alert('Help & Support', 'Contact us at support@paintme.app'),
+            onPress: openEmailSupport,
           },
           {
             icon: 'document-text',
             label: 'Terms & Privacy',
-            onPress: () => Alert.alert('Legal', 'Terms and Privacy Policy'),
+            onPress: openTermsAndPrivacy,
           },
         ])}
-
-        {/* Sign Out */}
-        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <Ionicons name="log-out" size={20} color="#FF6B6B" />
-          <ThemedText style={styles.signOutText}>Sign Out</ThemedText>
-        </TouchableOpacity>
       </ThemedView>
     </ScrollView>
   );
@@ -311,8 +348,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
   },
   header: {
-    paddingTop: 60,
-    paddingBottom: 30,
+    paddingTop: 50,
+    paddingBottom: 20,
     paddingHorizontal: 20,
   },
   profileInfo: {
@@ -339,7 +376,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: 15,
   },
   creditsSection: {
     backgroundColor: 'white',
@@ -389,7 +426,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   section: {
-    marginBottom: 25,
+    marginBottom: 15,
   },
   sectionTitle: {
     fontSize: 20,

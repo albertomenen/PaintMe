@@ -1,10 +1,18 @@
-import { ArtistStyle } from '@/constants/Config';
-import Replicate from 'replicate';
 
-// This tells the Replicate client to use your specific API token.
-const replicate = new Replicate({
-  auth: process.env.EXPO_PUBLIC_REPLICATE_API_TOKEN,
-});
+import { ArtistStyle } from '../constants/Config';
+
+// Lazy initialization para evitar TransformStream error
+let replicate: any = null;
+
+const getReplicateClient = () => {
+  if (!replicate) {
+    const Replicate = require('replicate');
+    replicate = new Replicate({
+      auth: process.env.EXPO_PUBLIC_REPLICATE_API_TOKEN,
+    });
+  }
+  return replicate;
+};
 
 export interface TransformationOptions {
   inputImageUrl: string;
@@ -86,7 +94,8 @@ export class ReplicateService {
 
       // STEP 1: Create the prediction. This matches the 'Access a prediction' section.
       console.log('📤 Creating prediction job...');
-      let prediction = await replicate.predictions.create({
+      const replicateClient = getReplicateClient();
+    let prediction = await replicateClient.predictions.create({
         // Use the model name directly, as per the documentation.
         // The library will automatically use the latest version.
         model: "black-forest-labs/flux-kontext-pro",
@@ -96,7 +105,7 @@ export class ReplicateService {
       console.log(`⏳ Prediction created with ID: ${prediction.id}. Waiting for completion...`);
 
       // STEP 2: Wait for the prediction to finish, as per the 'Prediction lifecycle' docs.
-      prediction = await replicate.wait(prediction, {
+      prediction = await replicateClient.wait(prediction, {
         // Optional: Add a webhook here if needed in the future
       });
 

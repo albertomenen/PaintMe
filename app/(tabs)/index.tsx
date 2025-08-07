@@ -17,10 +17,10 @@ import {
   View,
 } from 'react-native';
 
-import { ARTIST_STYLES, ArtistStyle } from '@/constants/Config';
-import { useUser } from '@/hooks/useUser';
-import { ImageUtils } from '@/lib/imageUtils';
-import { ReplicateService } from '@/lib/replicate';
+import { ARTIST_STYLES, ArtistStyle } from '../../constants/Config';
+import { useUser } from '../../hooks/useUser';
+import { ImageUtils } from '../../lib/imageUtils'
+import { ReplicateService } from '../../lib/replicate';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width - 32;

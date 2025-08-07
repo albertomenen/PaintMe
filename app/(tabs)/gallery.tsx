@@ -11,11 +11,11 @@ import {
     View,
 } from 'react-native';
 
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { ARTIST_STYLES } from '@/constants/Config';
-import { useUser } from '@/hooks/useUser';
-import { ImageUtils } from '@/lib/imageUtils';
+import { ThemedText } from '../../components/ThemedText';
+import { ThemedView } from '../../components/ThemedView';
+import { ARTIST_STYLES } from '../../constants/Config';
+import { useUser } from '../../hooks/useUser';
+import { ImageUtils } from '../../lib/imageUtils'
 
 const { width } = Dimensions.get('window');
 const imageSize = (width - 60) / 2;

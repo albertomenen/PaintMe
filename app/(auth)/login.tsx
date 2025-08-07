@@ -18,7 +18,11 @@ import {
   View,
 } from 'react-native';
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../../lib/supabase';
+
+import * as WebBrowser from 'expo-web-browser';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const { width, height } = Dimensions.get('window');
 
@@ -65,6 +69,37 @@ export default function LoginScreen() {
     } catch (error) {
       Alert.alert('Error', 'Something went wrong. Please try again.');
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: 'paintme://auth/callback',
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+      if (error) {
+        Alert.alert('Google Login Failed', error.message);
+        console.error('Google OAuth Error:', error);
+      } else {
+        // La redirección ocurrirá automáticamente gracias al listener de autenticación
+        // en tu AuthProvider o componente raíz. No necesitas hacer nada aquí.
+        console.log('✅ Google OAuth flow started successfully');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Could not sign in with Google. Please try again.');
+    } finally {
+      // Es buena idea resetear el estado de carga por si el usuario cancela
       setLoading(false);
     }
   };
@@ -194,7 +229,12 @@ export default function LoginScreen() {
               </View>
 
               {/* Social Login Placeholder */}
-              <TouchableOpacity style={styles.socialButton}>
+              <TouchableOpacity 
+              style={styles.socialButton}
+               onPress={handleGoogleLogin}
+               disabled={loading}
+               activeOpacity={0.8}
+               >
                 <Ionicons name="logo-google" size={20} color="#4285F4" />
                 <Text style={styles.socialText}>Continue with Google</Text>
               </TouchableOpacity>
