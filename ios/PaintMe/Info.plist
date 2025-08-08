@@ -27,6 +27,8 @@
 		<dict>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>google-sign-in</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>com.googleusercontent.apps.806855548294-dnikbag94fs7c5c81c46c88v3hpa54qa
@@ -36,9 +38,11 @@
 		<dict>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.menensito.PaintMe</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.menensito.PaintMe</string>
+				<string>paintme</string>
 			</array>
 		</dict>
 	</array>

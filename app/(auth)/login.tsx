@@ -85,7 +85,7 @@ export default function LoginScreen() {
       const hashedNonce = await Crypto.digestStringAsync(
         Crypto.CryptoDigestAlgorithm.SHA256,
         nonce,
-        { encoding: Crypto.CryptoEncoding.BASE64URL }
+        { encoding: Crypto.CryptoEncoding.BASE64 }
       );
 
       console.log('🍎 Starting Apple authentication...');

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Linking,
@@ -11,10 +11,12 @@ import {
   View,
 } from 'react-native';
 
+import { CustomerInfo, PurchasesPackage } from 'react-native-purchases';
 import { ThemedText } from '../../components/ThemedText';
 import { ThemedView } from '../../components/ThemedView';
 import { useAuth, useUser } from '../../hooks/useUser';
-import { StripeService } from '../../lib/stripe';
+import { CREDIT_PACKAGES, RevenueCatService } from '../../lib/revenuecat';
+import { supabase } from '../../lib/supabase';
 
 export default function ProfileScreen() {
   const { user, addImageGenerations, transformations } = useUser();
@@ -28,69 +30,181 @@ export default function ProfileScreen() {
       totalTransformations: user?.totalTransformations
     });
   }, [user?.imageGenerationsRemaining, user?.credits, user?.totalTransformations]);
+
+  // Cargar datos de RevenueCat
+  useEffect(() => {
+    const loadRevenueCatData = async () => {
+      try {
+        // Identificar usuario si está logueado
+        if (user?.id) {
+          await RevenueCatService.identifyUser(user.id);
+        }
+
+        // Obtener customer info
+        const info = await RevenueCatService.getCustomerInfo();
+        setCustomerInfo(info);
+
+        // Obtener offerings
+        const availableOfferings = await RevenueCatService.getOfferings();
+        if (availableOfferings.length > 0 && availableOfferings[0].availablePackages) {
+          setOfferings(availableOfferings[0].availablePackages);
+        }
+      } catch (error) {
+        console.error('❌ Error cargando datos de RevenueCat:', error);
+      }
+    };
+
+    if (user) {
+      loadRevenueCatData();
+    }
+  }, [user?.id]);
+
   const { signOut } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [offerings, setOfferings] = useState<PurchasesPackage[]>([]);
+  const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
 
-  const handlePurchaseCredits = async (creditPackage: 'small' | 'medium' | 'large') => {
+  // Nueva función para comprar con RevenueCat
+  const handleRevenueCatPurchase = async (packageToPurchase: PurchasesPackage) => {
     setIsLoading(true);
     
-    // In a real app, integrate with Stripe here
     try {
-      let credits = 0;
-      let price = '';
+      const result = await RevenueCatService.purchasePackage(packageToPurchase);
       
-      switch (creditPackage) {
-        case 'small':
-          credits = 5;
-          price = '$4.99';
-          break;
-        case 'medium':
-          credits = 15;
-          price = '$12.99';
-          break;
-        case 'large':
-          credits = 30;
-          price = '$19.99';
-          break;
+      if (result.success && result.customerInfo) {
+        // Determinar cuántos créditos corresponden a este paquete
+        const packageData = CREDIT_PACKAGES.find(p => p.identifier === packageToPurchase.product.identifier);
+        const credits = packageData?.credits || 5;
+        
+        // Actualizar créditos en Supabase
+        await addImageGenerations(credits);
+        
+        // Actualizar customer info local
+        setCustomerInfo(result.customerInfo);
+        
+        Alert.alert(
+          '🎉 ¡Compra Exitosa!',
+          `${credits} transformaciones añadidas a tu cuenta!`
+        );
+      } else {
+        if (result.error !== 'Purchase cancelled by user') {
+          Alert.alert('Error de Compra', result.error || 'No se pudo procesar el pago');
+        }
       }
-
-      Alert.alert(
-        'Purchase Credits',
-        `Purchase ${credits} transformations for ${price}?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Purchase',
-            onPress: async () => {
-              // Real Stripe purchase
-              if (user) {
-                console.log('💳 Starting Stripe purchase of', credits, 'generations');
-                setIsLoading(true);
-                
-                try {
-                  const result = await StripeService.purchaseCredits(creditPackage);
-                  
-                  if (result.success) {
-                    console.log('💳 Stripe payment successful!');
-                    await addImageGenerations(credits);
-                    Alert.alert('¡Pago exitoso!', `${credits} generaciones añadidas a tu cuenta!`);
-                  } 
-                } catch (error) {
-                  console.error('💳 Purchase error:', error);
-                  Alert.alert('Error', 'Hubo un problema procesando el pago');
-                } finally {
-                  setIsLoading(false);
-                }
-              }
-            }
-          }
-        ]
-      );
     } catch (error) {
-      Alert.alert('Error', 'Failed to process payment. Please try again.');
+      console.error('❌ Error en compra:', error);
+      Alert.alert('Error', 'Ocurrió un error inesperado. Inténtalo de nuevo.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Función para restaurar compras
+  const handleRestorePurchases = async () => {
+    setIsLoading(true);
+    
+    try {
+      const result = await RevenueCatService.restorePurchases();
+      
+      if (result.success) {
+        Alert.alert(
+          '✅ Compras Restauradas',
+          'Tus compras anteriores han sido restauradas exitosamente.'
+        );
+        
+        // Recargar customer info
+        const info = await RevenueCatService.getCustomerInfo();
+        setCustomerInfo(info);
+      } else {
+        Alert.alert(
+          'Sin Compras',
+          'No se encontraron compras anteriores para restaurar.'
+        );
+      }
+    } catch (error) {
+      console.error('❌ Error restaurando compras:', error);
+      Alert.alert('Error', 'No se pudieron restaurar las compras.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Función para eliminar cuenta
+  const handleDeleteAccount = async () => {
+    Alert.alert(
+      '⚠️ Delete Account',
+      'Are you sure you want to permanently delete your account? This action cannot be undone and will remove all your data, transformations, and purchases.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            // Segunda confirmación
+            Alert.alert(
+              '🚨 Final Confirmation',
+              'This will permanently delete your account and all associated data. Type DELETE to confirm.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'DELETE ACCOUNT',
+                  style: 'destructive',
+                  onPress: async () => {
+                    setIsLoading(true);
+                    
+                    try {
+                      console.log('🗑️ Attempting to delete user account...');
+                      
+                      // Llamar a Supabase Edge Function para eliminar cuenta
+                      const { error } = await supabase.functions.invoke('delete-user', {
+                        body: JSON.stringify({ userId: user?.id })
+                      });
+
+                      if (error) {
+                        console.error('❌ Delete account error:', error);
+                        Alert.alert(
+                          'Error', 
+                          'Failed to delete account. Please contact support at alberto@notjustvpn.com'
+                        );
+                      } else {
+                        console.log('✅ Account deleted successfully');
+                        
+                        // Logout de RevenueCat
+                        await RevenueCatService.logout();
+                        
+                        // Sign out de Supabase
+                        await signOut();
+                        
+                        Alert.alert(
+                          '✅ Account Deleted',
+                          'Your account has been permanently deleted.',
+                          [
+                            {
+                              text: 'OK',
+                              onPress: () => {
+                                router.replace('/(auth)/login');
+                              }
+                            }
+                          ]
+                        );
+                      }
+                    } catch (error) {
+                      console.error('❌ Delete account error:', error);
+                      Alert.alert(
+                        'Error',
+                        'An unexpected error occurred. Please contact support.'
+                      );
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }
+                }
+              ]
+            );
+          }
+        }
+      ]
+    );
   };
 
   const openEmailSupport = async () => {
@@ -159,7 +273,47 @@ export default function ProfileScreen() {
     );
   };
 
-  const renderCreditPackage = (
+  // Renderizar paquetes de RevenueCat
+  const renderRevenueCatPackage = (packageItem: PurchasesPackage, popular?: boolean) => {
+    const packageData = CREDIT_PACKAGES.find(p => p.identifier === packageItem.product.identifier);
+    if (!packageData) return null;
+
+    return (
+      <TouchableOpacity
+        key={packageItem.identifier}
+        style={[styles.creditPackage, popular && styles.popularPackage]}
+        onPress={() => handleRevenueCatPurchase(packageItem)}
+        disabled={isLoading}
+      >
+        {popular && (
+          <View style={styles.popularBadge}>
+            <ThemedText style={styles.popularText}>POPULAR</ThemedText>
+          </View>
+        )}
+        
+        <LinearGradient
+          colors={popular ? ['#FFD700', '#FFA500'] : ['#f8f9fa', '#e9ecef']}
+          style={styles.packageGradient}
+        >
+          <ThemedText style={[styles.creditsNumber, popular && styles.popularCreditsNumber]}>
+            {packageData.credits}
+          </ThemedText>
+          <ThemedText style={[styles.creditsLabel, popular && styles.popularCreditsLabel]}>
+            Transformations
+          </ThemedText>
+          <ThemedText style={[styles.price, popular && styles.popularPrice]}>
+            {packageItem.product.priceString}
+          </ThemedText>
+          <ThemedText style={[styles.pricePerCredit, popular && styles.popularPricePerCredit]}>
+            ${(packageItem.product.price / packageData.credits).toFixed(2)} each
+          </ThemedText>
+        </LinearGradient>
+      </TouchableOpacity>
+    );
+  };
+
+  // Fallback para paquetes estáticos si RevenueCat no está disponible
+  const renderFallbackPackage = (
     type: 'small' | 'medium' | 'large',
     credits: number,
     price: string,
@@ -168,8 +322,7 @@ export default function ProfileScreen() {
     <TouchableOpacity
       key={type}
       style={[styles.creditPackage, popular && styles.popularPackage]}
-      onPress={() => handlePurchaseCredits(type)}
-      disabled={isLoading}
+      disabled={true}
     >
       {popular && (
         <View style={styles.popularBadge}>
@@ -279,14 +432,35 @@ export default function ProfileScreen() {
         )}
         </View>
 
-        {/* Credit Packages */}
+        {/* Credit Packages - RevenueCat */}
         <View style={styles.section}>
           <ThemedText style={styles.sectionTitle}>Purchase Credits</ThemedText>
           <View style={styles.packagesGrid}>
-            {renderCreditPackage('small', 5, '$4.99')}
-            {renderCreditPackage('medium', 15, '$12.99', true)}
-            {renderCreditPackage('large', 30, '$19.99')}
+            {offerings.length > 0 ? (
+              offerings.map((packageItem, index) => 
+                renderRevenueCatPackage(packageItem, index === 1) // Hacer el segundo "popular"
+              )
+            ) : (
+              // Fallback si RevenueCat no está disponible
+              <>
+                {renderFallbackPackage('small', 5, '$4.99')}
+                {renderFallbackPackage('medium', 15, '$12.99', true)}
+                {renderFallbackPackage('large', 30, '$19.99')}
+              </>
+            )}
           </View>
+          
+          {/* Botón para restaurar compras */}
+          {offerings.length > 0 && (
+            <TouchableOpacity
+              style={styles.restoreButton}
+              onPress={handleRestorePurchases}
+              disabled={isLoading}
+            >
+              <Ionicons name="refresh" size={16} color="#667eea" />
+              <ThemedText style={styles.restoreText}>Restore Purchases</ThemedText>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Account Info */}
@@ -336,6 +510,12 @@ export default function ProfileScreen() {
             label: 'Terms & Privacy',
             onPress: openTermsAndPrivacy,
           },
+          {
+            icon: 'trash',
+            label: 'Delete Account',
+            onPress: handleDeleteAccount,
+            color: '#FF6B6B',
+          },
         ])}
       </ThemedView>
     </ScrollView>
@@ -377,6 +557,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 15,
+    paddingBottom: 100, // Espacio extra para que todo sea visible
   },
   creditsSection: {
     backgroundColor: 'white',
@@ -426,7 +607,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   section: {
-    marginBottom: 15,
+    marginBottom: 25, // Más espacio entre secciones
   },
   sectionTitle: {
     fontSize: 20,
@@ -547,6 +728,23 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 16,
     color: '#FF6B6B',
+    fontWeight: '500',
+  },
+  restoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 15,
+    padding: 12,
+    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(102, 126, 234, 0.3)',
+  },
+  restoreText: {
+    marginLeft: 6,
+    color: '#667eea',
+    fontSize: 14,
     fontWeight: '500',
   },
 }); 

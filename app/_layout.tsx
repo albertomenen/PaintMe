@@ -6,9 +6,9 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
-import 'react-native-reanimated';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import Purchases, { LOG_LEVEL } from 'react-native-purchases';
+import 'react-native-reanimated';
 
 
 import { useColorScheme } from '../hooks/useColorScheme';
@@ -26,9 +26,41 @@ export default function RootLayout() {
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
-  // Inicializar Stripe cuando la app arranque
+  // Inicializar RevenueCat cuando la app arranque
   useEffect(() => {
-    initializeStripe();
+    const initializeRevenueCat = async () => {
+      try {
+        // Configurar logs para desarrollo
+        Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+
+        // Configurar RevenueCat según la plataforma
+        if (Platform.OS === 'ios') {
+          await Purchases.configure({
+            apiKey: process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS || 'appl_hruassCwittfwOnwpWiohOMQQUB'
+          });
+        } else {
+          // Android
+          await Purchases.configure({
+            apiKey: process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID || 'goog_your_android_key'
+          });
+        }
+
+        console.log('✅ RevenueCat configurado exitosamente');
+
+        // Obtener información inicial del cliente
+        const customerInfo = await Purchases.getCustomerInfo();
+        console.log('👤 Customer Info:', {
+          originalAppUserId: customerInfo.originalAppUserId,
+          firstSeen: customerInfo.firstSeen,
+          activeEntitlements: Object.keys(customerInfo.entitlements.active)
+        });
+
+      } catch (error) {
+        console.error('❌ Error configurando RevenueCat:', error);
+      }
+    };
+
+    initializeRevenueCat();
   }, []);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
