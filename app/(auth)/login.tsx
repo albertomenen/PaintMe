@@ -1,5 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { BlurView } from 'expo-blur';
+import * as Crypto from 'expo-crypto';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -73,33 +75,62 @@ export default function LoginScreen() {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleAppleLogin = async () => {
     setLoading(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: 'paintme://auth/callback',
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
+      // Generar nonce seguro
+      const nonce = Math.random().toString(36).substring(2, 10);
+      const hashedNonce = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        nonce,
+        { encoding: Crypto.CryptoEncoding.BASE64URL }
+      );
+
+      console.log('🍎 Starting Apple authentication...');
+      
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+        nonce: hashedNonce,
       });
-      if (error) {
-        Alert.alert('Google Login Failed', error.message);
-        console.error('Google OAuth Error:', error);
+
+      console.log('🍎 Apple credential received:', credential.user);
+
+      if (credential.identityToken) {
+        const { data, error } = await supabase.auth.signInWithIdToken({
+          provider: 'apple',
+          token: credential.identityToken,
+          nonce,
+        });
+
+        if (error) {
+          console.error('❌ Supabase Apple auth error:', error);
+          Alert.alert('Authentication Failed', error.message);
+        } else {
+          console.log('✅ Apple Sign-In successful!');
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          
+          // Navegación automática manejada por auth state listener
+          setTimeout(() => {
+            router.replace('/(tabs)');
+          }, 100);
+        }
       } else {
-        // La redirección ocurrirá automáticamente gracias al listener de autenticación
-        // en tu AuthProvider o componente raíz. No necesitas hacer nada aquí.
-        console.log('✅ Google OAuth flow started successfully');
+        Alert.alert('Error', 'No identity token received from Apple.');
       }
-    } catch (error) {
-      Alert.alert('Error', 'Could not sign in with Google. Please try again.');
+    } catch (error: any) {
+      console.error('🍎 Apple Sign-In error:', error);
+      if (error.code === 'ERR_REQUEST_CANCELED') {
+        // Usuario canceló, no mostrar error
+        console.log('🍎 User canceled Apple Sign-In');
+      } else {
+        Alert.alert('Error', 'Could not sign in with Apple. Please try again.');
+      }
     } finally {
-      // Es buena idea resetear el estado de carga por si el usuario cancela
       setLoading(false);
     }
   };
@@ -228,16 +259,16 @@ export default function LoginScreen() {
                 <View style={styles.dividerLine} />
               </View>
 
-              {/* Social Login Placeholder */}
-              <TouchableOpacity 
-              style={styles.socialButton}
-               onPress={handleGoogleLogin}
-               disabled={loading}
-               activeOpacity={0.8}
-               >
-                <Ionicons name="logo-google" size={20} color="#4285F4" />
-                <Text style={styles.socialText}>Continue with Google</Text>
-              </TouchableOpacity>
+              {/* Apple Sign-In */}
+              {Platform.OS === 'ios' && (
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                  cornerRadius={16}
+                  style={styles.appleButton}
+                  onPress={handleAppleLogin}
+                />
+              )}
 
               {/* Sign Up Link */}
               <View style={styles.signupContainer}>
@@ -409,6 +440,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.7)',
+  },
+  appleButton: {
+    width: '100%',
+    height: 50,
+    marginBottom: 24,
   },
   socialButton: {
     flexDirection: 'row',

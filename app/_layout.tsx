@@ -8,7 +8,8 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
-import { initializeStripe } from '../lib/stripe';
+import Purchases, { LOG_LEVEL } from 'react-native-purchases';
+
 
 import { useColorScheme } from '../hooks/useColorScheme';
 import { supabase } from '../lib/supabase';

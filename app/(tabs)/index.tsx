@@ -6,20 +6,20 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 import { ARTIST_STYLES, ArtistStyle } from '../../constants/Config';
 import { useUser } from '../../hooks/useUser';
-import { ImageUtils } from '../../lib/imageUtils'
+import { ImageUtils } from '../../lib/imageUtils';
 import { ReplicateService } from '../../lib/replicate';
 
 const { width } = Dimensions.get('window');
