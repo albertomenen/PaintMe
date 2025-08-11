@@ -25,27 +25,24 @@ export class RevenueCatService {
   }
 
   // Obtener ofertas disponibles
-  static async getOfferings(): Promise<PurchasesOffering[]> {
+  static async getPackages(): Promise<PurchasesPackage[]> {
     try {
       const offerings = await Purchases.getOfferings();
-      console.log('📦 Offerings disponibles:', {
-        current: offerings.current?.identifier,
-        all: Object.keys(offerings.all)
-      });
       
-      if (offerings.current && offerings.current.availablePackages.length > 0) {
-        console.log('📋 Paquetes en offering actual:', 
-          offerings.current.availablePackages.map(p => ({
-            identifier: p.identifier,
-            product: p.product.identifier,
-            price: p.product.priceString
-          }))
+      // Verificamos si hay una oferta "current" y si tiene paquetes
+      if (offerings.current && offerings.current.availablePackages.length !== 0) {
+        console.log('✅ Paquetes de la oferta actual encontrados:', 
+          offerings.current.availablePackages.map(p => p.product.identifier)
         );
+        // Devolvemos directamente el array de paquetes
+        return offerings.current.availablePackages;
       }
-      
-      return Object.values(offerings.all);
+  
+      console.warn('⚠️ No se encontró una oferta "current" o no tiene paquetes.');
+      return []; // Devolvemos un array vacío si no hay nada
+  
     } catch (error) {
-      console.error('❌ Error obteniendo offerings:', error);
+      console.error('❌ Error obteniendo ofertas:', error);
       return [];
     }
   }
@@ -146,18 +143,18 @@ export interface CreditPackage {
 
 export const CREDIT_PACKAGES: CreditPackage[] = [
   {
-    identifier: 'paintme_5_credits',
+    identifier: '5_images_artme',
     credits: 5,
-    name: 'Starter Pack'
+    name: '5 Images Pack'
   },
   {
-    identifier: 'paintme_15_credits', 
+    identifier: '15_images_artme', 
     credits: 15,
-    name: 'Creator Pack'
+    name: '15 Images Pack'
   },
   {
-    identifier: 'paintme_30_credits',
+    identifier: '30_images_artme',
     credits: 30,
-    name: 'Artist Pack'
+    name: '30 Images Pack'
   }
 ];

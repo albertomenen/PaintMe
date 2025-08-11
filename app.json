@@ -8,28 +8,12 @@
     "assetBundlePatterns": ["**/*"],
     "userInterfaceStyle": "automatic",
     "icon": "./assets/images/icon.png",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.menensito.PaintMe",
-      "scheme": "com.menensito.PaintMe",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSAppTransportSecurity": {
-          "NSExceptionDomains": {
-            "vvzxthzeuqhwasortjhc.supabase.co": {
-              "NSIncludesSubdomains": true,
-              "NSExceptionAllowsInsecureHTTPLoads": true
-            }
-          }
-        },
-        "CFBundleURLTypes": [
-          {
-            "CFBundleURLName": "com.menensito.PaintMe",
-            "CFBundleURLSchemes": ["com.menensito.PaintMe", "paintme"]
-          }
-        ],
-        "NSCameraUsageDescription": "PaintMe needs access to your camera to take photos that will be transformed into beautiful artwork using AI. Your photos are processed securely and never shared.",
+        "NSCameraUsageDescription": "PaintMe needs access to your camera to take photos that you can transform into beautiful artwork using AI. Your photos are processed securely and never shared.",
         "NSPhotoLibraryUsageDescription": "PaintMe needs access to your photo library to select images that will be transformed into artistic masterpieces. Choose any photo to turn it into art in the style of famous painters.",
         "NSPhotoLibraryAddUsageDescription": "PaintMe needs permission to save your newly created artworks to your photo library. Your AI-generated art will be saved so you can share and enjoy it forever."
       }
@@ -39,7 +23,6 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
       "package": "com.menensito.PaintMe"
     },
     "web": {
@@ -57,13 +40,16 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-apple-authentication" 
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
-      "router": {},
+      "router": {
+        "origin": false
+      },
       "eas": {
         "projectId": "93aff252-7914-4b34-aa0e-34a0d589add1"
       }

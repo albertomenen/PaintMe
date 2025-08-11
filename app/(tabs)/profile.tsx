@@ -32,32 +32,35 @@ export default function ProfileScreen() {
   }, [user?.imageGenerationsRemaining, user?.credits, user?.totalTransformations]);
 
   // Cargar datos de RevenueCat
-  useEffect(() => {
-    const loadRevenueCatData = async () => {
-      try {
-        // Identificar usuario si está logueado
-        if (user?.id) {
-          await RevenueCatService.identifyUser(user.id);
-        }
+  // ProfileScreen.tsx
 
-        // Obtener customer info
-        const info = await RevenueCatService.getCustomerInfo();
-        setCustomerInfo(info);
-
-        // Obtener offerings
-        const availableOfferings = await RevenueCatService.getOfferings();
-        if (availableOfferings.length > 0 && availableOfferings[0].availablePackages) {
-          setOfferings(availableOfferings[0].availablePackages);
-        }
-      } catch (error) {
-        console.error('❌ Error cargando datos de RevenueCat:', error);
+// Cargar datos de RevenueCat
+useEffect(() => {
+  const loadRevenueCatData = async () => {
+    try {
+      // Identificar usuario si está logueado
+      if (user?.id) {
+        await RevenueCatService.identifyUser(user.id);
       }
-    };
 
-    if (user) {
-      loadRevenueCatData();
+      // Obtener customer info
+      const info = await RevenueCatService.getCustomerInfo();
+      setCustomerInfo(info);
+
+      // Obtener los paquetes de la oferta actual directamente
+      const packages = await RevenueCatService.getPackages();
+      setOfferings(packages);
+
+    } catch (error) { // <-- Ahora el catch está dentro de la función
+      console.error('❌ Error cargando datos de RevenueCat:', error);
+      Alert.alert('Error', 'Could not load products. Please try again later.');
     }
-  }, [user?.id]);
+  }; // <-- La llave que cierra 'loadRevenueCatData' está aquí
+
+  if (user) {
+    loadRevenueCatData();
+  }
+}, [user?.id]);
 
   const { signOut } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -406,7 +409,7 @@ export default function ProfileScreen() {
         {/* Credits Section */}
         <View style={styles.creditsSection}>
                   <View style={styles.creditsHeader}>
-          <ThemedText style={styles.creditsTitle}>Your Transformations</ThemedText>
+          <ThemedText style={styles.creditsTitle}>Your Masterpieces</ThemedText>
           <View style={styles.creditsBalance}>
             <ThemedText style={styles.creditsCount}>{user?.imageGenerationsRemaining || 0}</ThemedText>
             <ThemedText style={styles.creditsLabel}>generaciones restantes</ThemedText>
