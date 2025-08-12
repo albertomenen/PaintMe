@@ -110,9 +110,9 @@ export class StripeService {
     packageType: 'small' | 'medium' | 'large'
   ): Promise<PaymentResult> {
     const packages = {
-      small: { amount: 499, credits: 5, productId: 'prod_SnZuznQUreq7y6' },
-      medium: { amount: 1299, credits: 15, productId: 'prod_SnZujyFmt2tNHh' },
-      large: { amount: 1999, credits: 30, productId: 'prod_SnZvwLMzmJw8Y2' }
+      small: { amount: 599, credits: 5, productId: 'prod_SnZuznQUreq7y6' },
+      medium: { amount: 1499, credits: 15, productId: 'prod_SnZujyFmt2tNHh' },
+      large: { amount: 2299, credits: 30, productId: 'prod_SnZvwLMzmJw8Y2' }
     };
 
     const selectedPackage = packages[packageType];

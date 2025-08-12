@@ -446,8 +446,8 @@ useEffect(() => {
             ) : (
               // Fallback si RevenueCat no está disponible
               <>
-                {renderFallbackPackage('small', 5, '$4.99')}
-                {renderFallbackPackage('medium', 15, '$12.99', true)}
+                {renderFallbackPackage('small', 5, '$5.99')}
+                {renderFallbackPackage('medium', 15, '$14.99', true)}
                 {renderFallbackPackage('large', 30, '$19.99')}
               </>
             )}

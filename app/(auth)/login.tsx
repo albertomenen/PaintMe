@@ -6,7 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Alert,
   Dimensions,
@@ -33,6 +33,8 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const nonceRef = useRef<string | null>(null);
 
   // Debug: Log when login screen renders
   React.useEffect(() => {
@@ -78,46 +80,55 @@ export default function LoginScreen() {
   const handleAppleLogin = async () => {
     setLoading(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
+  
     try {
-      // Generar nonce seguro
-      const nonce = Math.random().toString(36).substring(2, 10);
+      // 1️⃣ Generar nonce aleatorio seguro
+      const rawNonce = Math.random().toString(36).substring(2, 15) + 
+                       Math.random().toString(36).substring(2, 15) + 
+                       Date.now().toString(36);
+      nonceRef.current = rawNonce; // Guardar para usar con Supabase
+  
+      console.log('🔑 Generated nonce:', rawNonce);
+  
+      // 2️⃣ Hashear el nonce en SHA256 (formato HEX para Apple)
       const hashedNonce = await Crypto.digestStringAsync(
         Crypto.CryptoDigestAlgorithm.SHA256,
-        nonce,
-        { encoding: Crypto.CryptoEncoding.BASE64 }
+        rawNonce // ⚠️ sin encoding extra, por defecto es HEX
       );
-
-      console.log('🍎 Starting Apple authentication...');
-      
+  
+      console.log('🔐 Hashed nonce (HEX):', hashedNonce);
+  
+      // 3️⃣ Iniciar sesión con Apple usando el hashedNonce
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
-        nonce: hashedNonce,
+        nonce: hashedNonce, // Apple recibe el hash
       });
-
-      console.log('🍎 Apple credential received:', credential.user);
-
-      if (credential.identityToken) {
+  
+      console.log('🍎 Apple credential:', {
+        user: credential.user,
+        hasIdentityToken: !!credential.identityToken
+      });
+  
+      // 4️⃣ Enviar token de Apple + nonce original a Supabase
+      if (credential.identityToken && nonceRef.current) {
         const { data, error } = await supabase.auth.signInWithIdToken({
           provider: 'apple',
           token: credential.identityToken,
-          nonce,
+          nonce: nonceRef.current, // ⚠️ aquí va el ORIGINAL, no el hash
         });
-
+  
+        nonceRef.current = null; // Limpieza
+  
         if (error) {
           console.error('❌ Supabase Apple auth error:', error);
           Alert.alert('Authentication Failed', error.message);
         } else {
-          console.log('✅ Apple Sign-In successful!');
+          console.log('✅ Apple Sign-In successful!', data);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          
-          // Navegación automática manejada por auth state listener
-          setTimeout(() => {
-            router.replace('/(tabs)');
-          }, 100);
+          router.replace('/(tabs)');
         }
       } else {
         Alert.alert('Error', 'No identity token received from Apple.');
@@ -125,7 +136,6 @@ export default function LoginScreen() {
     } catch (error: any) {
       console.error('🍎 Apple Sign-In error:', error);
       if (error.code === 'ERR_REQUEST_CANCELED') {
-        // Usuario canceló, no mostrar error
         console.log('🍎 User canceled Apple Sign-In');
       } else {
         Alert.alert('Error', 'Could not sign in with Apple. Please try again.');

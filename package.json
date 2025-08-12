@@ -53,7 +53,8 @@
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5",
     "replicate": "^1.0.1",
-    "web-streams-polyfill": "^4.1.0"
+    "web-streams-polyfill": "^4.1.0",
+    "expo-secure-store": "~14.2.3"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
