@@ -6,15 +6,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import { ARTIST_STYLES, ArtistStyle } from '../../constants/Config';
@@ -254,7 +254,7 @@ export default function TransformScreen() {
           setSelectedArtist(artistKey);
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }}>
-        <Image source={{ uri: artist.sampleImage }} style={styles.artistImage} />
+        <Image source={artist.sampleImage} style={styles.artistImage} />
         <View style={styles.artistInfo}>
           <Text style={styles.artistName}>{artist.name}</Text>
         </View>
