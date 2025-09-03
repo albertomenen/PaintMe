@@ -19,8 +19,11 @@ import {
 
 import { ARTIST_STYLES, ArtistStyle } from '../../constants/Config';
 import { useUser } from '../../hooks/useUser';
+import { useNotificationSettings } from '../../hooks/useNotificationSettings';
 import { ImageUtils } from '../../lib/imageUtils';
+import { NotificationService } from '../../lib/notifications';
 import { ReplicateService } from '../../lib/replicate';
+import { Analytics } from '../../lib/analytics';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width - 32;
@@ -38,6 +41,8 @@ export default function TransformScreen() {
   });
 
   const { user, canTransform, addTransformation, updateTransformation, decrementImageGenerations, loading, updateTrigger } = useUser();
+  const { settings: notificationSettings } = useNotificationSettings();
+  const [transformStartTime, setTransformStartTime] = useState<number | null>(null);
 
   // State to force re-render when user data changes
   const [, forceUpdate] = React.useReducer(x => x + 1, 0);
@@ -89,6 +94,7 @@ export default function TransformScreen() {
         }
         setSelectedImage(uri);
         setTransformedImage(null);
+        Analytics.trackImageSelected('gallery');
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to select image. Please try again.');
@@ -123,6 +129,7 @@ export default function TransformScreen() {
         }
         setSelectedImage(uri);
         setTransformedImage(null);
+        Analytics.trackImageSelected('camera');
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to take photo. Please try again.');
@@ -149,6 +156,11 @@ export default function TransformScreen() {
     setIsTransforming(true);
     setTransformedImage(null);
     setTransformationProgress({ uploading: true, processing: false, error: null });
+    setTransformStartTime(Date.now());
+    
+    // Track transformation started
+    const artistName = ARTIST_STYLES[selectedArtist].name;
+    Analytics.trackImageTransformationStarted(artistName);
 
     try {
       const transformation = await addTransformation({
@@ -197,9 +209,27 @@ export default function TransformScreen() {
         // Decrementar generaciones después de transformación exitosa
         await decrementImageGenerations();
         
+        // Track successful transformation
+        const processingTime = transformStartTime ? (Date.now() - transformStartTime) / 1000 : 0;
+        Analytics.trackImageTransformationCompleted(artistName, processingTime);
+        
+        // Enviar notificación de éxito si está habilitada
+        if (notificationSettings.transformationComplete) {
+          await NotificationService.sendImageTransformedNotification();
+        }
+        
+        // Programar recordatorio para crear más arte (24 horas) si está habilitado
+        if (notificationSettings.reminders && user?.imageGenerationsRemaining && user.imageGenerationsRemaining > 0) {
+          await NotificationService.sendReminderNotification(24);
+        }
+        
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
         await updateTransformation(transformation.id, { status: 'failed' });
+        
+        // Track failed transformation
+        Analytics.trackImageTransformationFailed(artistName, result.error || 'Unknown error');
+        
         Alert.alert('Transformation Failed', result.error || 'The AI failed to transform the image.');
         setTransformationProgress({ uploading: false, processing: false, error: 'Transformation Failed' });
       }
@@ -232,6 +262,7 @@ export default function TransformScreen() {
     if (!transformedImage) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     await ImageUtils.saveToGallery(transformedImage);
+    Analytics.trackImageSaved();
   };
 
   const getTransformButtonText = () => {
@@ -253,6 +284,7 @@ export default function TransformScreen() {
         onPress={() => {
           setSelectedArtist(artistKey);
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          Analytics.trackArtistStyleSelected(artist.name);
         }}>
         <Image source={artist.sampleImage} style={styles.artistImage} />
         <View style={styles.artistInfo}>

@@ -15,7 +15,8 @@ import { ThemedText } from '../../components/ThemedText';
 import { ThemedView } from '../../components/ThemedView';
 import { ARTIST_STYLES } from '../../constants/Config';
 import { useUser } from '../../hooks/useUser';
-import { ImageUtils } from '../../lib/imageUtils'
+import { ImageUtils } from '../../lib/imageUtils';
+import { Analytics } from '../../lib/analytics';
 
 const { width } = Dimensions.get('window');
 const imageSize = (width - 60) / 2;
@@ -53,6 +54,11 @@ export default function GalleryScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'caravaggio' | 'velazquez' | 'goya'>('all');
 
+  // Track gallery view
+  React.useEffect(() => {
+    Analytics.trackGalleryViewed();
+  }, []);
+
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
     // In a real app, fetch fresh data from Supabase
@@ -63,6 +69,7 @@ export default function GalleryScreen() {
 
   const handleSaveImage = async (imageUrl: string) => {
     await ImageUtils.saveToGallery(imageUrl);
+    Analytics.trackImageSaved();
   };
 
   const filteredTransformations = transformations.filter(t => 

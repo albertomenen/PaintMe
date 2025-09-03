@@ -26,6 +26,13 @@
       },
       "package": "com.menensito.PaintMe"
     },
+    "notification": {
+      "icon": "./assets/images/notification-icon.png",
+      "color": "#FFD700",
+      "sounds": ["./assets/sounds/notification.wav"],
+      "androidMode": "default",
+      "androidCollapsedTitle": "#{unread_notifications} nuevas notificaciones"
+    },
     "web": {
       "bundler": "metro",
       "output": "static",
@@ -43,7 +50,15 @@
         }
       ],
       "expo-secure-store",
-      ["expo-apple-authentication"]
+      ["expo-apple-authentication"],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#FFD700",
+          "defaultChannel": "default"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

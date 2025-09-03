@@ -1,0 +1,70 @@
+{
+  "onboarding": {
+    "skip": "Skip",
+    "next": "Next",
+    "start": "Get Started",
+    "steps": {
+      "upload": {
+        "title": "Upload Your Photo Effortlessly",
+        "description": "Imagine turning your everyday photo into a timeless work of art. Simply select any image from your gallery or snap a new one—our advanced AI handles everything, no matter the quality or subject. It's quick, easy, and the first step to unlocking your creative potential.."
+      },
+      "style": {
+        "title": "Select a Masterful Style",
+        "description": "Feel the thrill of artistic mastery at your fingertips. Choose from legendary painters like Caravaggio's dramatic shadows, Goya's bold expressions, or Velázquez's elegant realism. Thousands of users have already discovered how these styles bring their photos to life in ways they never imagined—now it's your turn to create something extraordinary."
+      },
+      "transform": {
+        "title": "Transform and Revel in Your Masterpiece ( 1 Free)!",
+        "description": "Watch the magic unfold with just one tap on 'Transform.' Our AI crafts a one-of-a-kind artwork tailored to you, ready to save, share, and impress your friends. And because we know you'll love it, we're giving you your first transformation absolutely free—try it now and see the difference!"
+      }
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "settings": {
+      "transformationComplete": {
+        "title": "Image Transformed",
+        "description": "Get notified when your image is ready"
+      },
+      "reminders": {
+        "title": "Reminders",
+        "description": "We remind you to create more art when you have credits"
+      },
+      "marketing": {
+        "title": "Promotions",
+        "description": "Receive special offers and discounts"
+      }
+    },
+    "messages": {
+      "imageReady": {
+        "title": "🎨 Your masterpiece is ready!",
+        "body": "Your image has been successfully transformed. Tap to view it!"
+      },
+      "reminder": {
+        "title": "🖼️ Ready to create more art?",
+        "body": "You have credits available to transform more images. Create your next masterpiece!"
+      },
+      "test": {
+        "title": "🧪 Test Notification",
+        "body": "Notifications are working correctly!"
+      }
+    },
+    "alerts": {
+      "scheduled": "Notification Scheduled",
+      "testMessage": "You will receive a test notification in a few seconds.",
+      "error": "Could not schedule test notification."
+    },
+    "info": {
+      "help": "Notifications help you know when your creations are ready and not miss special offers.",
+      "privacy": "You can change these settings anytime from your profile."
+    }
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "back": "Back",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "yes": "Yes",
+    "no": "No"
+  }
+}

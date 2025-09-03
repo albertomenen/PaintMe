@@ -1,0 +1,70 @@
+{
+  "onboarding": {
+    "skip": "Saltar",
+    "next": "Siguiente",
+    "start": "Comenzar",
+    "steps": {
+      "upload": {
+        "title": "Sube Tu Foto Sin Esfuerzo",
+        "description": "Imagina transformar tu foto cotidiana en una obra de arte atemporal. Simplemente selecciona cualquier imagen de tu galería o toma una nueva—nuestra IA avanzada se encarga de todo, sin importar la calidad o el sujeto. Es rápido, fácil y el primer paso para desbloquear tu potencial creativo"
+      },
+      "style": {
+        "title": "Selecciona un Estilo Magistral",
+        "description": "Siente la emoción de la maestría artística al alcance de tu mano. Elige entre pintores legendarios como las sombras dramáticas de Caravaggio, las expresiones audaces de Goya o el realismo elegante de Velázquez. Miles de usuarios ya han descubierto cómo estos estilos dan vida a sus fotos de maneras que nunca imaginaron—ahora es tu turno de crear algo extraordinario."
+      },
+      "transform": {
+        "title": "¡Transforma y Disfruta de Tu Obra Maestra ( 1 gratis)!",
+        "description": "Observa cómo se despliega la magia con solo un toque en 'Transformar'. Nuestra IA crea una obra de arte única adaptada a ti, lista para guardar, compartir e impresionar a tus amigos."
+      }
+    }
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "settings": {
+      "transformationComplete": {
+        "title": "Imagen Transformada",
+        "description": "Recibe una notificación cuando tu imagen esté lista"
+      },
+      "reminders": {
+        "title": "Recordatorios",
+        "description": "Te recordamos crear más arte cuando tengas créditos"
+      },
+      "marketing": {
+        "title": "Promociones",
+        "description": "Recibe ofertas especiales y descuentos"
+      }
+    },
+    "messages": {
+      "imageReady": {
+        "title": "🎨 ¡Tu obra maestra está lista!",
+        "body": "Tu imagen ha sido transformada exitosamente. ¡Toca para verla!"
+      },
+      "reminder": {
+        "title": "🖼️ ¿Listos para crear más arte?",
+        "body": "Tienes créditos disponibles para transformar más imágenes. ¡Crea tu próxima obra maestra!"
+      },
+      "test": {
+        "title": "🧪 Notificación de Prueba",
+        "body": "¡Las notificaciones están funcionando correctamente!"
+      }
+    },
+    "alerts": {
+      "scheduled": "Notificación Programada",
+      "testMessage": "Recibirás una notificación de prueba en unos segundos.",
+      "error": "No se pudo programar la notificación de prueba."
+    },
+    "info": {
+      "help": "Las notificaciones te ayudan a saber cuando tus creaciones están listas y a no perderte ofertas especiales.",
+      "privacy": "Puedes cambiar estos ajustes en cualquier momento desde tu perfil."
+    }
+  },
+  "common": {
+    "loading": "Cargando...",
+    "error": "Error",
+    "back": "Atrás",
+    "cancel": "Cancelar",
+    "ok": "OK",
+    "yes": "Sí",
+    "no": "No"
+  }
+}

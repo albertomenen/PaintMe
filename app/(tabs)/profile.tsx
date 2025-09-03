@@ -17,9 +17,19 @@ import { ThemedView } from '../../components/ThemedView';
 import { useAuth, useUser } from '../../hooks/useUser';
 import { CREDIT_PACKAGES, RevenueCatService } from '../../lib/revenuecat';
 import { supabase } from '../../lib/supabase';
+import NotificationSettingsScreen from '../../components/NotificationSettings';
+import LanguageSelector from '../../components/LanguageSelector';
+import { Analytics } from '../../lib/analytics';
 
 export default function ProfileScreen() {
   const { user, addImageGenerations, transformations } = useUser();
+  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
+  const [showLanguageSelector, setShowLanguageSelector] = useState(false);
+
+  // Track profile view
+  React.useEffect(() => {
+    Analytics.trackProfileViewed();
+  }, []);
 
   // Monitor user changes in profile
   React.useEffect(() => {
@@ -501,7 +511,18 @@ useEffect(() => {
           {
             icon: 'notifications',
             label: 'Notifications',
-            onPress: () => Alert.alert('Coming Soon', 'Notification settings will be available soon!'),
+            onPress: () => {
+              setShowNotificationSettings(true);
+              Analytics.trackEvent('Notification Settings Opened');
+            },
+          },
+          {
+            icon: 'language',
+            label: 'Language / Idioma',
+            onPress: () => {
+              setShowLanguageSelector(true);
+              Analytics.trackEvent('Language Selector Opened');
+            },
           },
           {
             icon: 'help-circle',
@@ -521,6 +542,19 @@ useEffect(() => {
           },
         ])}
       </ThemedView>
+      
+      {/* Notification Settings Modal */}
+      {showNotificationSettings && (
+        <View style={styles.modalOverlay}>
+          <NotificationSettingsScreen onBack={() => setShowNotificationSettings(false)} />
+        </View>
+      )}
+      
+      {/* Language Selector Modal */}
+      <LanguageSelector 
+        visible={showLanguageSelector} 
+        onClose={() => setShowLanguageSelector(false)} 
+      />
     </ScrollView>
   );
 }
@@ -749,5 +783,14 @@ const styles = StyleSheet.create({
     color: '#667eea',
     fontSize: 14,
     fontWeight: '500',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#FFF',
+    zIndex: 1000,
   },
 }); 
