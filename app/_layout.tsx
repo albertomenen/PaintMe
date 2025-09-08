@@ -1,6 +1,3 @@
-// Polyfill para TransformStream (necesario para Replicate)
-import 'web-streams-polyfill/polyfill';
-
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { router, Stack } from 'expo-router';
@@ -10,19 +7,12 @@ import { ActivityIndicator, Platform, View } from 'react-native';
 import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 import 'react-native-reanimated';
 
-
 import { useColorScheme } from '../hooks/useColorScheme';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { supabase } from '../lib/supabase';
 import { NotificationService } from '../lib/notifications';
 import { Analytics } from '../lib/analytics';
 import Onboarding from '../components/Onboarding';
-
-// Configurar TransformStream globalmente
-if (typeof global.TransformStream === 'undefined') {
-  const { TransformStream } = require('web-streams-polyfill');
-  global.TransformStream = TransformStream;
-}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -97,9 +87,9 @@ export default function RootLayout() {
     const responseListener = NotificationService.addNotificationResponseListener((response) => {
       const data = response.notification.request.content.data;
       
-      if (data?.redirectTo) {
+      if (data?.redirectTo && typeof data.redirectTo === 'string') {
         // Navigate to the specified route
-        router.push(data.redirectTo);
+        router.push(data.redirectTo as any);
       }
     });
 
