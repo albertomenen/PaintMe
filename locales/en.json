@@ -43,6 +43,10 @@
         "title": "🖼️ Ready to create more art?",
         "body": "You have credits available to transform more images. Create your next masterpiece!"
       },
+      "specialOffer": {
+        "title": "🎉 Special Offer!",
+        "body": "80% OFF for limited time only. Come back now and save!"
+      },
       "test": {
         "title": "🧪 Test Notification",
         "body": "Notifications are working correctly!"
@@ -56,6 +60,45 @@
     "info": {
       "help": "Notifications help you know when your creations are ready and not miss special offers.",
       "privacy": "You can change these settings anytime from your profile."
+    }
+  },
+  "paywall": {
+    "loading": "Loading offers...",
+    "normal": {
+      "title": "Unlock Full Power",
+      "subtitle": "Transform all your photos with advanced AI"
+    },
+    "specialOffer": {
+      "title": "Special Offer!",
+      "limitedTime": "🔥 LIMITED TIME",
+      "fromNotification": "📱 From Notification",
+      "expiresIn": "Offer expires in:",
+      "originalPrice": "Original price: $9.99",
+      "youSave": "You save 80%!",
+      "claimDeal": "Claim Deal",
+      "successTitle": "Amazing Deal Completed!",
+      "successMessage": "Welcome to Premium! You saved 80% 🎉"
+    },
+    "features": {
+      "unlimited": "Unlimited transformations",
+      "allStyles": "All art styles",
+      "exclusiveStyles": "Exclusive Premium styles",
+      "hdDownload": "HD downloads",
+      "ultraHD": "Ultra HD downloads",
+      "priority": "Priority processing",
+      "vipSupport": "VIP support"
+    },
+    "purchase": "Purchase",
+    "maybe_later": "Maybe later",
+    "success": {
+      "title": "Purchase Successful!",
+      "message": "Welcome to Premium! Enjoy all the features."
+    },
+    "error": {
+      "title": "Error",
+      "loadFailed": "Could not load offers",
+      "purchaseFailed": "Purchase failed",
+      "offerNotAvailable": "This special offer is no longer available"
     }
   },
   "common": {

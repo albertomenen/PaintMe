@@ -265,19 +265,19 @@ enabled = true
 client_id = "com.menensito.PaintMe,com.menensito.PaintMe.auth"
 # DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
 # Aquí pegamos tu clave directamente
-secret = """
------BEGIN PRIVATE KEY-----
-MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQg3bWc8GM8SJIWlRHA
-enNKioYR3w+0bx8FsnC3Nb/Cth+gCgYIKoZIzj0DAQehRANCAARepcfmzGxA+sQI
-0syeFK19Gxe3BA+yV+BJgt4/LZicsOcppTkfsUiFWxxAt0zQu0qcw9XYU15g9aJ9
-584/LUB3
------END PRIVATE KEY-----
-"""
+# secret = """
+# -----BEGIN PRIVATE KEY-----
+# MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQg3bWc8GM8SJIWlRHA
+# enNKioYR3w+0bx8FsnC3Nb/Cth+gCgYIKoZIzj0DAQehRANCAARepcfmzGxA+sQI
+# 0syeFK19Gxe3BA+yV+BJgt4/LZicsOcppTkfsUiFWxxAt0zQu0qcw9XYU15g9aJ9
+# 584/LUB3
+# -----END PRIVATE KEY-----
+# """
 
 # Overrides the default auth redirectUrl.
 redirect_uri = "https://vvzxthzeuqhwasortjhc.supabase.co/auth/v1/callback"
-key_id="NSK7869B5S"
-team_id="5P5S7D5SUX"
+# key_id="NSK7869B5S"
+# team_id="5P5S7D5SUX"
 # Overrides the default auth provider URL. Used to support self-hosted gitlab, single-tenant Azure,
 # or any other third-party OIDC providers.
 url = ""

@@ -43,6 +43,10 @@
         "title": "🖼️ ¿Listos para crear más arte?",
         "body": "Tienes créditos disponibles para transformar más imágenes. ¡Crea tu próxima obra maestra!"
       },
+      "specialOffer": {
+        "title": "🎉 ¡Oferta especial!",
+        "body": "80% de descuento solo por tiempo limitado. ¡Regresa ahora y ahorra!"
+      },
       "test": {
         "title": "🧪 Notificación de Prueba",
         "body": "¡Las notificaciones están funcionando correctamente!"
@@ -52,6 +56,45 @@
       "scheduled": "Notificación Programada",
       "testMessage": "Recibirás una notificación de prueba en unos segundos.",
       "error": "No se pudo programar la notificación de prueba."
+    }
+  },
+  "paywall": {
+    "loading": "Cargando ofertas...",
+    "normal": {
+      "title": "Desbloquea el Poder Completo",
+      "subtitle": "Transforma todas tus fotos con IA avanzada"
+    },
+    "specialOffer": {
+      "title": "¡Oferta Especial!",
+      "limitedTime": "🔥 TIEMPO LIMITADO",
+      "fromNotification": "📱 Desde Notificación",
+      "expiresIn": "La oferta expira en:",
+      "originalPrice": "Precio original: $9.99",
+      "youSave": "¡Ahorras 80%!",
+      "claimDeal": "Reclamar Oferta",
+      "successTitle": "¡Increíble Oferta Completada!",
+      "successMessage": "¡Bienvenido a Premium! Ahorraste 80% 🎉"
+    },
+    "features": {
+      "unlimited": "Transformaciones ilimitadas",
+      "allStyles": "Todos los estilos artísticos",
+      "exclusiveStyles": "Estilos exclusivos de Premium",
+      "hdDownload": "Descargas en HD",
+      "ultraHD": "Descargas Ultra HD",
+      "priority": "Procesamiento prioritario",
+      "vipSupport": "Soporte VIP"
+    },
+    "purchase": "Comprar",
+    "maybe_later": "Quizás más tarde",
+    "success": {
+      "title": "¡Compra Exitosa!",
+      "message": "¡Bienvenido a Premium! Disfruta de todas las funciones."
+    },
+    "error": {
+      "title": "Error",
+      "loadFailed": "No se pudieron cargar las ofertas",
+      "purchaseFailed": "La compra falló",
+      "offerNotAvailable": "Esta oferta especial ya no está disponible"
     },
     "info": {
       "help": "Las notificaciones te ayudan a saber cuando tus creaciones están listas y a no perderte ofertas especiales.",

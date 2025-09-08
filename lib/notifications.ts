@@ -76,6 +76,8 @@ export class NotificationService {
         shouldShowAlert: true,
         shouldPlaySound: true,
         shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
       }),
     });
 
@@ -119,7 +121,11 @@ export class NotificationService {
         sound: 'default',
         categoryIdentifier: 'image_transformed',
       },
-      trigger: seconds ? { seconds } : null,
+      trigger: seconds ? { 
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds,
+        repeats: false 
+      } : null,
     });
   }
 
@@ -148,8 +154,41 @@ export class NotificationService {
         },
         sound: 'default',
       },
-      trigger: { seconds },
+      trigger: seconds ? { 
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds,
+        repeats: false 
+      } : null,
     });
+  }
+
+  static async sendSpecialOfferNotification(minutesFromNow: number = 5): Promise<void> {
+    const seconds = minutesFromNow * 60; // Convert minutes to seconds
+    
+    // Cancel any existing notifications first
+    await this.cancelAllNotifications();
+    
+    await this.scheduleNotificationAsync({
+      content: {
+        title: i18n.t('notifications.messages.specialOffer.title'),
+        body: i18n.t('notifications.messages.specialOffer.body'),
+        data: { 
+          action: 'special_offer',
+          isOffer: 'true',
+          offeringId: 'ofrng15feade036',
+          redirectTo: '/special-offer-paywall'
+        },
+        sound: 'default',
+        categoryIdentifier: 'special_offer',
+      },
+      trigger: seconds ? { 
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds,
+        repeats: false 
+      } : null,
+    });
+    
+    console.log(`⏰ Special offer notification scheduled for ${minutesFromNow} minutes from now`);
   }
 
   static async scheduleNotificationAsync(notificationRequest: Notifications.NotificationRequestInput): Promise<string> {
