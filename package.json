@@ -42,6 +42,7 @@
     "expo-secure-store": "~14.2.3",
     "expo-splash-screen": "~0.30.10",
     "expo-status-bar": "~2.2.3",
+    "expo-superwall": "^0.2.6",
     "expo-symbols": "~0.4.5",
     "expo-system-ui": "~5.0.10",
     "expo-web-browser": "~14.2.0",
@@ -62,7 +63,8 @@
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5",
     "replicate": "^1.0.1",
-    "web-streams-polyfill": "^4.1.0"
+    "web-streams-polyfill": "^4.1.0",
+    "expo-build-properties": "~0.14.8"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

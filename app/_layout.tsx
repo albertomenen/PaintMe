@@ -2,10 +2,12 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import { router, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState, useRef } from 'react';
-import { ActivityIndicator, Platform, View, AppState, Modal } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 import 'react-native-reanimated';
+import { SuperwallProvider } from "expo-superwall";
+
 
 import { useColorScheme } from '../hooks/useColorScheme';
 import { useOnboarding } from '../hooks/useOnboarding';
@@ -13,23 +15,18 @@ import { supabase } from '../lib/supabase';
 import { NotificationService } from '../lib/notifications';
 import { Analytics } from '../lib/analytics';
 import Onboarding from '../components/Onboarding';
-import NormalPaywallScreen from '../components/NormalPaywallScreen';
-import SpecialOfferPaywallScreen from '../components/SpecialOfferPaywallScreen';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
-  const { isOnboardingCompleted, loading: onboardingLoading, completeOnboarding } = useOnboarding();
+  const { isOnboardingCompleted, loading: onboardingLoading, completeOnboarding, resetOnboarding } = useOnboarding();
   
-  // Paywall state management
-  const [showNormalPaywall, setShowNormalPaywall] = useState(false);
-  const [showSpecialOfferPaywall, setShowSpecialOfferPaywall] = useState(false);
-  const [userCancelledPurchase, setUserCancelledPurchase] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const appState = useRef(AppState.currentState);
-  const [hasShownNormalPaywall, setHasShownNormalPaywall] = useState(false);
+
+  const superwallApiKey = "pk_CWUYuUCZLqn5-DHooMRT5";
+
 
   // Inicializar RevenueCat y notificaciones cuando la app arranque
   useEffect(() => {
@@ -113,38 +110,6 @@ export default function RootLayout() {
     };
   }, []);
 
-  // Handle notification responses for paywall navigation
-  useEffect(() => {
-    const handleNotificationResponse = NotificationService.addNotificationResponseListener((response) => {
-      const data = response.notification.request.content.data;
-      
-      if (data?.isOffer === 'true') {
-        console.log('🎁 Opening special offer paywall from notification');
-        setShowSpecialOfferPaywall(true);
-      }
-    });
-
-    return () => handleNotificationResponse.remove();
-  }, []);
-
-  // AppState monitoring for purchase cancellation detection
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', (nextAppState) => {
-      if (
-        appState.current.match(/inactive|background/) &&
-        nextAppState === 'active' &&
-        userCancelledPurchase &&
-        !hasShownNormalPaywall
-      ) {
-        console.log('📱 User returned to app without purchasing, scheduling special offer notification');
-        NotificationService.sendSpecialOfferNotification(5);
-      }
-      
-      appState.current = nextAppState;
-    });
-
-    return () => subscription?.remove();
-  }, [userCancelledPurchase, hasShownNormalPaywall]);
 
   useEffect(() => {
     // Check initial session
@@ -167,6 +132,22 @@ export default function RootLayout() {
           console.log('✅ User signed in successfully via OAuth');
           setIsAuthenticated(true);
           
+          // Check if this is a new user (registered within last 5 minutes)
+          const userCreatedAt = new Date(session.user.created_at);
+          const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+          const isNewUser = userCreatedAt > fiveMinutesAgo;
+          
+          console.log('🔍 User creation check:', {
+            userCreatedAt: userCreatedAt.toISOString(),
+            fiveMinutesAgo: fiveMinutesAgo.toISOString(),
+            isNewUser
+          });
+          
+          if (isNewUser) {
+            console.log('🆕 New user detected, resetting onboarding');
+            resetOnboarding();
+          }
+          
           // Track user sign in
           Analytics.identifyUser(session.user.id, session.user.email);
           Analytics.trackUserSignIn('apple'); // Assuming Apple sign in based on your setup
@@ -184,7 +165,7 @@ export default function RootLayout() {
     );
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [resetOnboarding]);
 
   if (!loaded || isAuthenticated === null || onboardingLoading) {
     return (
@@ -203,17 +184,13 @@ export default function RootLayout() {
   if (isAuthenticated && !isOnboardingCompleted) {
     return <Onboarding onComplete={() => {
       completeOnboarding();
-      // Show normal paywall after onboarding completion
-      setTimeout(() => {
-        setShowNormalPaywall(true);
-        setHasShownNormalPaywall(true);
-      }, 500);
     }} />;
   }
 
   console.log('🚀 Rendering navigation - Authenticated:', isAuthenticated);
 
   return (
+    <SuperwallProvider apiKeys={{ ios: superwallApiKey }}>
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
@@ -228,34 +205,8 @@ export default function RootLayout() {
         )}
       </Stack>
       
-      {/* Normal Paywall Modal */}
-      <Modal
-        visible={showNormalPaywall}
-        animationType="slide"
-        presentationStyle="fullScreen"
-      >
-        <NormalPaywallScreen 
-          onClose={() => setShowNormalPaywall(false)}
-          onPurchaseCancelled={() => {
-            setUserCancelledPurchase(true);
-            setShowNormalPaywall(false);
-          }}
-        />
-      </Modal>
-      
-      {/* Special Offer Paywall Modal */}
-      <Modal
-        visible={showSpecialOfferPaywall}
-        animationType="slide"
-        presentationStyle="fullScreen"
-      >
-        <SpecialOfferPaywallScreen 
-          onClose={() => setShowSpecialOfferPaywall(false)}
-          fromNotification={true}
-        />
-      </Modal>
-      
       <StatusBar style="auto" />
     </ThemeProvider>
+    </SuperwallProvider>
   );
 }

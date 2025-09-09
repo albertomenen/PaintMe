@@ -1,0 +1,130 @@
+{
+  "identifier" : "2CF48816",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "id" : "com.menensito.paintme.premium_monthly",
+      "localizations" : [
+        {
+          "description" : "Transform unlimited photos with AI art styles",
+          "displayName" : "Premium Monthly",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "Transforma fotos ilimitadas con estilos de arte IA",
+          "displayName" : "Premium Mensual",
+          "locale" : "es_ES"
+        }
+      ],
+      "productID" : "com.menensito.paintme.premium_monthly",
+      "referenceName" : "Premium Monthly",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "19.99",
+      "familyShareable" : false,
+      "id" : "com.menensito.paintme.premium_yearly",
+      "localizations" : [
+        {
+          "description" : "Transform unlimited photos with AI art styles - Best Value!",
+          "displayName" : "Premium Yearly",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "Transforma fotos ilimitadas con estilos de arte IA - ¡Mejor Valor!",
+          "displayName" : "Premium Anual",
+          "locale" : "es_ES"
+        }
+      ],
+      "productID" : "com.menensito.paintme.premium_yearly",
+      "referenceName" : "Premium Yearly",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "1.99",
+      "familyShareable" : false,
+      "id" : "com.menensito.paintme.special_offer",
+      "localizations" : [
+        {
+          "description" : "Special 80% OFF offer - Limited time only!",
+          "displayName" : "Special Offer",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "Oferta especial 80% DESCUENTO - ¡Tiempo limitado!",
+          "displayName" : "Oferta Especial",
+          "locale" : "es_ES"
+        }
+      ],
+      "productID" : "com.menensito.paintme.special_offer",
+      "referenceName" : "Special Offer",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6670506945",
+    "_developerTeamID" : "3ZL56N5W3A",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 745279739.70935702,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}
