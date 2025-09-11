@@ -22,9 +22,12 @@ import LanguageSelector from '../../components/LanguageSelector';
 import { Analytics } from '../../lib/analytics';
 
 export default function ProfileScreen() {
-  const { user, addImageGenerations, transformations } = useUser();
+  const { user, addImageGenerations, transformations, updateTrigger } = useUser();
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
+  
+  // Force re-render trigger
+  const [, forceUpdate] = React.useReducer(x => x + 1, 0);
 
   // Track profile view
   React.useEffect(() => {
@@ -37,9 +40,10 @@ export default function ProfileScreen() {
       hasUser: !!user,
       imageGenerationsRemaining: user?.imageGenerationsRemaining,
       credits: user?.credits,
-      totalTransformations: user?.totalTransformations
+      totalTransformations: user?.totalTransformations,
+      updateTrigger
     });
-  }, [user?.imageGenerationsRemaining, user?.credits, user?.totalTransformations]);
+  }, [user?.imageGenerationsRemaining, user?.credits, user?.totalTransformations, updateTrigger]);
 
   // Cargar datos de RevenueCat
   // ProfileScreen.tsx
@@ -70,7 +74,7 @@ useEffect(() => {
   if (user) {
     loadRevenueCatData();
   }
-}, [user?.id]);
+}, [user?.id, user]);
 
   const { signOut } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -90,7 +94,17 @@ useEffect(() => {
         const credits = packageData?.credits || 5;
         
         // Actualizar créditos en Supabase
+        console.log('🏪 PROFILE: Attempting to add credits:', credits);
         await addImageGenerations(credits);
+        console.log('🏪 PROFILE: Credits added successfully via Profile purchase');
+        
+        // Force immediate UI update in profile
+        forceUpdate();
+        
+        // Wait a bit for the database update to propagate
+        setTimeout(() => {
+          forceUpdate();
+        }, 1000);
         
         // Actualizar customer info local
         setCustomerInfo(result.customerInfo);
@@ -426,6 +440,11 @@ useEffect(() => {
           </View>
         </View>
         
+        {/* DEBUG: Mostrar el valor actual en profile */}
+        <ThemedText style={{ fontSize: 12, color: 'red', textAlign: 'center', marginTop: 10 }}>
+          DEBUG PROFILE: user={!!user ? 'exists' : 'null'}, credits={user?.imageGenerationsRemaining || 'undefined'}, updateTrigger={updateTrigger}
+        </ThemedText>
+        
         {user && user.imageGenerationsRemaining === 0 && user.totalTransformations > 0 && (
           <View style={styles.freeTrialNotice}>
             <Ionicons name="gift" size={24} color="#FF6B6B" />
@@ -456,8 +475,8 @@ useEffect(() => {
             ) : (
               // Fallback si RevenueCat no está disponible
               <>
-                {renderFallbackPackage('small', 5, '$5.99')}
-                {renderFallbackPackage('medium', 15, '$14.99', true)}
+                {renderFallbackPackage('small', 5, '$4.99')}
+                {renderFallbackPackage('medium', 15, '$12.99', true)}
                 {renderFallbackPackage('large', 30, '$19.99')}
               </>
             )}

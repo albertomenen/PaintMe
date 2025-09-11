@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -29,6 +29,7 @@ const { width } = Dimensions.get('window');
 const CARD_WIDTH = width - 32;
 const IMAGE_SIZE = Math.min(width - 48, 300);
 
+
 export default function TransformScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedArtist, setSelectedArtist] = useState<ArtistStyle | null>(null);
@@ -47,18 +48,25 @@ export default function TransformScreen() {
   // State to force re-render when user data changes
   const [, forceUpdate] = React.useReducer(x => x + 1, 0);
 
-  // Monitor user changes and force update
+  // Monitor user changes
   React.useEffect(() => {
-    console.log('🔄 Index - User state changed:', {
+    console.log('🏠 INDEX - User state changed:', {
       hasUser: !!user,
       userGenerations: user?.imageGenerationsRemaining,
       canTransform: canTransform(),
-      loading
+      loading,
+      updateTrigger,
+      timestamp: new Date().toISOString()
     });
-    
-    // Force re-render when user data changes
-    forceUpdate();
-  }, [user?.imageGenerationsRemaining, user?.id, loading, updateTrigger]);
+  }, [user?.imageGenerationsRemaining, user?.id, user?.credits, loading, updateTrigger]);
+
+  // Force update when screen comes into focus (after returning from profile)
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('🏠 INDEX - Screen focused, forcing update for credits display');
+      forceUpdate();
+    }, [])
+  );
 
   const requestPermissions = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -208,6 +216,10 @@ export default function TransformScreen() {
         
         // Decrementar generaciones después de transformación exitosa
         await decrementImageGenerations();
+        console.log('🏠 INDEX: Credits decremented after transformation');
+        
+        // Force immediate UI update in index
+        forceUpdate();
         
         // Track successful transformation
         const processingTime = transformStartTime ? (Date.now() - transformStartTime) / 1000 : 0;
@@ -350,6 +362,11 @@ export default function TransformScreen() {
         </View>
 
         <View style={styles.ctaContainer}>
+          {/* DEBUG: Mostrar el valor actual */}
+          <Text style={{ color: 'white', textAlign: 'center', marginBottom: 10 }}>
+            DEBUG INDEX: user={!!user ? 'exists' : 'null'}, credits={user?.imageGenerationsRemaining || 'undefined'}, loading={loading}
+          </Text>
+          
           {user && user.imageGenerationsRemaining > 0 ? (
             // Si el usuario tiene créditos, muestra el botón para generar
             <TouchableOpacity

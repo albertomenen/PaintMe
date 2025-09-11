@@ -185,7 +185,7 @@ export default function LoginScreen() {
                 />
               </LinearGradient>
             </View>
-            <Text style={styles.title}>PaintMe</Text>
+            <Text style={styles.title}>PaintMe test7</Text>
             <Text style={styles.subtitle}>Transform into Masterpieces</Text>
           </View>
 

@@ -28,7 +28,6 @@ export function useUser() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [transformations, setTransformations] = useState<Transformation[]>([]);
-  const [imageGenerationsRemaining, setImageGenerationsRemaining] = useState(0);
   const [updateTrigger, setUpdateTrigger] = useState(0);
 
   useEffect(() => {
@@ -139,7 +138,7 @@ export function useUser() {
 
 
       // Convert snake_case to camelCase
-      const transformationsList: Transformation[] = data.map(t => ({
+      const transformationsList: Transformation[] = (data || []).map(t => ({
         id: t.id,
         userId: t.user_id,
         originalImageUrl: t.original_image_url,
@@ -353,7 +352,15 @@ export function useUser() {
     hasCredits,
     canTransform,
     updateTrigger,
-    refreshUser: () => loadUserProfile,
+    refreshUser: () => {
+      if (user?.id) {
+        supabase.auth.getUser().then(({ data: { user: authUser } }) => {
+          if (authUser) {
+            loadUserProfile(authUser);
+          }
+        });
+      }
+    },
   };
 }
 

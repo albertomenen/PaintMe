@@ -2,7 +2,7 @@
   "expo": {
     "name": "PaintMe",
     "slug": "PaintMe",
-    "version": "4.0.0",
+    "version": "4.7.0",
     "orientation": "portrait",
     "scheme": "paintme",
     "assetBundlePatterns": ["**/*"],
@@ -17,7 +17,8 @@
         "NSCameraUsageDescription": "PaintMe needs access to your camera to take photos that you can transform into beautiful artwork using AI. Your photos are processed securely and never shared.",
         "NSPhotoLibraryUsageDescription": "PaintMe needs access to your photo library to select images that will be transformed into artistic masterpieces. Choose any photo to turn it into art in the style of famous painters.",
         "NSPhotoLibraryAddUsageDescription": "PaintMe needs permission to save your newly created artworks to your photo library. Your AI-generated art will be saved so you can share and enjoy it forever."
-      }
+      },
+      "storeKitTestConfiguration": "./StoreKitTestConfiguration.storekit"
     },
     "android": {
       "adaptiveIcon": {
@@ -66,7 +67,7 @@
             "minSdkVersion": 26
           },
           "ios": {
-              "deploymentTarget": "14.0"
+              "deploymentTarget": "15.1"
           }
         }
       ]

@@ -5,64 +5,64 @@
   ],
   "products" : [
     {
-      "displayPrice" : "9.99",
+      "displayPrice" : "5.99",
       "familyShareable" : false,
-      "id" : "com.menensito.paintme.premium_monthly",
+      "id" : "5_images_artme",
       "localizations" : [
         {
-          "description" : "Transform unlimited photos with AI art styles",
-          "displayName" : "Premium Monthly",
+          "description" : "5 AI Art Transformations",
+          "displayName" : "5 Transformations",
           "locale" : "en_US"
         },
         {
-          "description" : "Transforma fotos ilimitadas con estilos de arte IA",
-          "displayName" : "Premium Mensual",
+          "description" : "5 Transformaciones de Arte IA",
+          "displayName" : "5 Transformaciones",
           "locale" : "es_ES"
         }
       ],
-      "productID" : "com.menensito.paintme.premium_monthly",
-      "referenceName" : "Premium Monthly",
-      "type" : "NonConsumable"
+      "productID" : "5_images_artme",
+      "referenceName" : "5 Images Pack",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "14.99",
+      "familyShareable" : false,
+      "id" : "15_images_artme",
+      "localizations" : [
+        {
+          "description" : "15 AI Art Transformations - Popular!",
+          "displayName" : "15 Transformations",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "15 Transformaciones de Arte IA - ¡Popular!",
+          "displayName" : "15 Transformaciones",
+          "locale" : "es_ES"
+        }
+      ],
+      "productID" : "15_images_artme",
+      "referenceName" : "15 Images Pack",
+      "type" : "Consumable"
     },
     {
       "displayPrice" : "19.99",
       "familyShareable" : false,
-      "id" : "com.menensito.paintme.premium_yearly",
+      "id" : "30_images_artme",
       "localizations" : [
         {
-          "description" : "Transform unlimited photos with AI art styles - Best Value!",
-          "displayName" : "Premium Yearly",
+          "description" : "30 AI Art Transformations - Best Value!",
+          "displayName" : "30 Transformations",
           "locale" : "en_US"
         },
         {
-          "description" : "Transforma fotos ilimitadas con estilos de arte IA - ¡Mejor Valor!",
-          "displayName" : "Premium Anual",
+          "description" : "30 Transformaciones de Arte IA - ¡Mejor Valor!",
+          "displayName" : "30 Transformaciones",
           "locale" : "es_ES"
         }
       ],
-      "productID" : "com.menensito.paintme.premium_yearly",
-      "referenceName" : "Premium Yearly",
-      "type" : "NonConsumable"
-    },
-    {
-      "displayPrice" : "1.99",
-      "familyShareable" : false,
-      "id" : "com.menensito.paintme.special_offer",
-      "localizations" : [
-        {
-          "description" : "Special 80% OFF offer - Limited time only!",
-          "displayName" : "Special Offer",
-          "locale" : "en_US"
-        },
-        {
-          "description" : "Oferta especial 80% DESCUENTO - ¡Tiempo limitado!",
-          "displayName" : "Oferta Especial",
-          "locale" : "es_ES"
-        }
-      ],
-      "productID" : "com.menensito.paintme.special_offer",
-      "referenceName" : "Special Offer",
-      "type" : "NonConsumable"
+      "productID" : "30_images_artme",
+      "referenceName" : "30 Images Pack",
+      "type" : "Consumable"
     }
   ],
   "settings" : {

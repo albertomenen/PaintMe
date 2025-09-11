@@ -198,8 +198,8 @@ PaintMe/
 - **Free Trial**: 1 free transformation for new users
 - **Pay-per-Transform**: Purchase credits for additional transformations
 - **Credit Packages**:
-  - 5 transformations - $4.99
-  - 15 transformations - $12.99 (Popular)
+  - 5 transformations - $5.99
+  - 15 transformations - $14.99 (Popular)
   - 30 transformations - $19.99
 
 ## 🔒 Security Features
