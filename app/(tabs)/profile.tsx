@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { CustomerInfo, PurchasesPackage } from 'react-native-purchases';
 import { ThemedText } from '../../components/ThemedText';
@@ -101,10 +102,10 @@ useEffect(() => {
         // Force immediate UI update in profile
         forceUpdate();
         
-        // Wait a bit for the database update to propagate
-        setTimeout(() => {
-          forceUpdate();
-        }, 1000);
+        // FORCE SYNC: Store credits in AsyncStorage for index to read
+        const newTotal = (user?.imageGenerationsRemaining || 0) + credits;
+        await AsyncStorage.setItem('user_credits', newTotal.toString());
+        console.log('💾 Stored credits in AsyncStorage:', newTotal);
         
         // Actualizar customer info local
         setCustomerInfo(result.customerInfo);
@@ -440,10 +441,7 @@ useEffect(() => {
           </View>
         </View>
         
-        {/* DEBUG: Mostrar el valor actual en profile */}
-        <ThemedText style={{ fontSize: 12, color: 'red', textAlign: 'center', marginTop: 10 }}>
-          DEBUG PROFILE: user={!!user ? 'exists' : 'null'}, credits={user?.imageGenerationsRemaining || 'undefined'}, updateTrigger={updateTrigger}
-        </ThemedText>
+       
         
         {user && user.imageGenerationsRemaining === 0 && user.totalTransformations > 0 && (
           <View style={styles.freeTrialNotice}>

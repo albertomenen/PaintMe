@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { ARTIST_STYLES, ArtistStyle } from '../../constants/Config';
 import { useUser } from '../../hooks/useUser';
@@ -47,6 +48,9 @@ export default function TransformScreen() {
 
   // State to force re-render when user data changes
   const [, forceUpdate] = React.useReducer(x => x + 1, 0);
+  
+  // Local credits override for immediate display
+  const [localCredits, setLocalCredits] = useState<number | null>(null);
 
   // Monitor user changes
   React.useEffect(() => {
@@ -63,8 +67,25 @@ export default function TransformScreen() {
   // Force update when screen comes into focus (after returning from profile)
   useFocusEffect(
     React.useCallback(() => {
-      console.log('🏠 INDEX - Screen focused, forcing update for credits display');
-      forceUpdate();
+      const checkCreditsFromStorage = async () => {
+        try {
+          const storedCredits = await AsyncStorage.getItem('user_credits');
+          if (storedCredits) {
+            const credits = parseInt(storedCredits);
+            console.log('📱 INDEX - Found credits in AsyncStorage:', credits);
+            setLocalCredits(credits);
+            forceUpdate();
+          } else {
+            console.log('📱 INDEX - No credits in AsyncStorage, using user data');
+            setLocalCredits(null);
+            forceUpdate();
+          }
+        } catch (error) {
+          console.log('📱 INDEX - Error reading AsyncStorage:', error);
+        }
+      };
+      
+      checkCreditsFromStorage();
     }, [])
   );
 
@@ -362,12 +383,9 @@ export default function TransformScreen() {
         </View>
 
         <View style={styles.ctaContainer}>
-          {/* DEBUG: Mostrar el valor actual */}
-          <Text style={{ color: 'white', textAlign: 'center', marginBottom: 10 }}>
-            DEBUG INDEX: user={!!user ? 'exists' : 'null'}, credits={user?.imageGenerationsRemaining || 'undefined'}, loading={loading}
-          </Text>
+         
           
-          {user && user.imageGenerationsRemaining > 0 ? (
+          {user && (localCredits !== null ? localCredits > 0 : user.imageGenerationsRemaining > 0) ? (
             // Si el usuario tiene créditos, muestra el botón para generar
             <TouchableOpacity
               style={[styles.transformButton, (!selectedImage || !selectedArtist || isTransforming) && styles.disabledButton]}
@@ -376,7 +394,7 @@ export default function TransformScreen() {
               <LinearGradient colors={['#FFD700', '#FFA500']} style={styles.buttonGradient}>
                 {isTransforming && <ActivityIndicator size="small" color="#000" style={{ marginRight: 10 }} />}
                 <Text style={styles.buttonText}>
-                  {isTransforming ? 'Creando Arte...' : `Generar Imagen (${user?.imageGenerationsRemaining || 0} restantes)`}
+                  {isTransforming ? 'Creando Arte...' : `Generar Imagen (${localCredits !== null ? localCredits : (user?.imageGenerationsRemaining || 0)} restantes)`}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>

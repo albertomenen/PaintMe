@@ -210,6 +210,11 @@ export function useUser() {
       // Trigger update for all components
       setUpdateTrigger(prev => prev + 1);
       
+      // Force immediate global state update
+      setTimeout(() => {
+        setUpdateTrigger(prev => prev + 1);
+      }, 100);
+      
     } catch (error) {
       console.error('❌ Database error:', error);
     }
@@ -246,6 +251,11 @@ export function useUser() {
       
       // Trigger update for all components
       setUpdateTrigger(prev => prev + 1);
+      
+      // Force immediate global state update
+      setTimeout(() => {
+        setUpdateTrigger(prev => prev + 1);
+      }, 100);
       
     } catch (error) {
       console.error('❌ Database decrement error:', error);
