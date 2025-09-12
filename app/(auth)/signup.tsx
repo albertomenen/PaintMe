@@ -155,12 +155,13 @@ export default function SignupScreen() {
         {/* Background Art */}
         <View style={styles.artBackground}>
           <Image
-            source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Diego_Vel%C3%A1zquez_Autorretrato_45_x_38_cm_-_Colecci%C3%B3n_Real_Academia_de_Bellas_Artes_de_San_Carlos_-_Museo_de_Bellas_Artes_de_Valencia.jpg/800px-Diego_Vel%C3%A1zquez_Autorretrato_45_x_38_cm_-_Colecci%C3%B3n_Real_Academia_de_Bellas_Artes_de_San_Carlos_-_Museo_de_Bellas_Artes_de_Valencia.jpg' }}
+            source={require('../../assets/images/register-art.png')}
             style={styles.backgroundImage}
-            blurRadius={4}
+            contentFit="cover"
           />
           <LinearGradient
-            colors={['rgba(26,26,46,0.9)', 'rgba(15,52,96,0.8)']}
+            colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.7)']}
+            locations={[0, 0.5, 1]}
             style={StyleSheet.absoluteFill}
           />
         </View>
@@ -173,12 +174,12 @@ export default function SignupScreen() {
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <LinearGradient
-                colors={['#FFD700', '#FFA500', '#FF6347']}
-                style={styles.logoGradient}
-              >
-                <Ionicons name="brush" size={32} color="white" />
-              </LinearGradient>
+              
+                <Image
+                  source={require('../../assets/images/jaoin-icon.png')}
+                  style={styles.logoIcon}
+                />
+            
             </View>
             <Text style={styles.title}>Join PaintMe</Text>
             <Text style={styles.subtitle}>Begin your artistic transformation</Text>
@@ -330,7 +331,7 @@ const styles = StyleSheet.create({
   backgroundImage: {
     width: '100%',
     height: '100%',
-    opacity: 0.3,
+    opacity: 0.8,
   },
   scrollContainer: {
     flexGrow: 1,
@@ -356,6 +357,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 10,
+  },
+  logoIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   title: {
     fontSize: 32,

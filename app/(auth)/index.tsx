@@ -3,8 +3,8 @@ import { useEffect } from 'react';
 
 export default function AuthIndex() {
   useEffect(() => {
-    console.log('🔐 Auth Index: Redirecting to login screen');
+    console.log('🎨 Auth Index: Redirecting to welcome screen');
   }, []);
 
-  return <Redirect href="/login" />;
+  return <Redirect href="/welcome" />;
 } 

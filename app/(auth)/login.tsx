@@ -157,12 +157,13 @@ export default function LoginScreen() {
         {/* Background Art */}
         <View style={styles.artBackground}>
           <Image
-            source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Caravaggio_-_Bacco_adolescente_-_Google_Art_Project.jpg/800px-Caravaggio_-_Bacco_adolescente_-_Google_Art_Project.jpg' }}
+            source={require('../../assets/images/logjn-art.png')}
             style={styles.backgroundImage}
-            blurRadius={4}
+            contentFit="cover"
           />
           <LinearGradient
-            colors={['rgba(26,26,46,0.9)', 'rgba(15,52,96,0.8)']}
+            colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.7)']}
+            locations={[0, 0.5, 1]}
             style={StyleSheet.absoluteFill}
           />
         </View>
@@ -180,13 +181,13 @@ export default function LoginScreen() {
                 style={styles.logoGradient}
               >
                 <Image
-                  source={require('../../assets/images/appstore.png')}
+                  source={require('../../assets/images/icon2.png')}
                   style={styles.logoImage}
                 />
               </LinearGradient>
             </View>
-            <Text style={styles.title}>PaintMe test7</Text>
-            <Text style={styles.subtitle}>Transform into Masterpieces</Text>
+            <Text style={styles.title}>PaintMe</Text>
+            <Text style={styles.subtitle}>Transform any photo into Masterpieces</Text>
           </View>
 
           {/* Login Form */}
@@ -314,7 +315,7 @@ const styles = StyleSheet.create({
   backgroundImage: {
     width: '100%',
     height: '100%',
-    opacity: 0.3,
+    opacity: 0.8,
   },
   scrollContainer: {
     flexGrow: 1,
