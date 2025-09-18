@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { ARTIST_STYLES, ArtistStyle } from '../../constants/Config';
+import { ARTIST_STYLES, ArtistStyle, ANIME_STYLES, AnimeStyle } from '../../constants/Config';
 import { useUser } from '../../hooks/useUser';
 import { useNotificationSettings } from '../../hooks/useNotificationSettings';
 import { ImageUtils } from '../../lib/imageUtils';
@@ -34,6 +34,7 @@ const IMAGE_SIZE = Math.min(width - 48, 300);
 export default function TransformScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedArtist, setSelectedArtist] = useState<ArtistStyle | null>(null);
+  const [selectedAnime, setSelectedAnime] = useState<AnimeStyle | null>(null);
   const [isTransforming, setIsTransforming] = useState(false);
   const [transformedImage, setTransformedImage] = useState<string | null>(null);
   const [transformationProgress, setTransformationProgress] = useState({
@@ -166,7 +167,7 @@ export default function TransformScreen() {
   };
 
   const transformImage = async () => {
-    if (!selectedImage || !selectedArtist) {
+    if (!selectedImage || (!selectedArtist && !selectedAnime)) {
       Alert.alert('Missing selection', 'Please select both an image and an artist style.');
       return;
     }
@@ -188,13 +189,14 @@ export default function TransformScreen() {
     setTransformStartTime(Date.now());
     
     // Track transformation started
-    const artistName = ARTIST_STYLES[selectedArtist].name;
+    const styleChoice = selectedArtist || selectedAnime;
+    const artistName = selectedArtist ? ARTIST_STYLES[selectedArtist].name : ANIME_STYLES[selectedAnime!].name;
     Analytics.trackImageTransformationStarted(artistName);
 
     try {
       const transformation = await addTransformation({
         originalImageUrl: selectedImage,
-        artistStyle: selectedArtist,
+        artistStyle: styleChoice,
         status: 'pending'
       });
 
@@ -223,7 +225,7 @@ export default function TransformScreen() {
 
       const result = await ReplicateService.transformImage(
         uploadResult.url!,
-        selectedArtist
+        styleChoice!
       );
 
       setTransformationProgress({ uploading: false, processing: false, error: null });
@@ -313,19 +315,47 @@ export default function TransformScreen() {
     return (
       <TouchableOpacity
         key={artistKey}
-        style={[styles.artistCard, isSelected && styles.selectedArtistCard]}
+        style={[styles.carouselCard, isSelected && styles.selectedCarouselCard]}
         onPress={() => {
           setSelectedArtist(artistKey);
+          setSelectedAnime(null);
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           Analytics.trackArtistStyleSelected(artist.name);
         }}>
-        <Image source={artist.sampleImage} style={styles.artistImage} />
-        <View style={styles.artistInfo}>
-          <Text style={styles.artistName}>{artist.name}</Text>
+        <Image source={artist.sampleImage} style={styles.carouselImage} />
+        <View style={styles.carouselInfo}>
+          <Text style={styles.carouselName}>{artist.name}</Text>
         </View>
         {isSelected && (
-          <View style={styles.checkmark}>
-            <Ionicons name="checkmark-circle" size={24} color="#FFD700" />
+          <View style={styles.carouselCheckmark}>
+            <Ionicons name="checkmark-circle" size={20} color="#FFD700" />
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
+  const renderAnimeCard = (animeKey: AnimeStyle) => {
+    const anime = ANIME_STYLES[animeKey];
+    const isSelected = selectedAnime === animeKey;
+
+    return (
+      <TouchableOpacity
+        key={animeKey}
+        style={[styles.carouselCard, isSelected && styles.selectedCarouselCard]}
+        onPress={() => {
+          setSelectedAnime(animeKey);
+          setSelectedArtist(null);
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          Analytics.trackArtistStyleSelected(anime.name);
+        }}>
+        <Image source={anime.sampleImage} style={styles.carouselImage} />
+        <View style={styles.carouselInfo}>
+          <Text style={styles.carouselName}>{anime.name}</Text>
+        </View>
+        {isSelected && (
+          <View style={styles.carouselCheckmark}>
+            <Ionicons name="checkmark-circle" size={20} color="#FFD700" />
           </View>
         )}
       </TouchableOpacity>
@@ -377,9 +407,24 @@ export default function TransformScreen() {
 
         <View style={styles.artistSelector}>
           <Text style={styles.sectionTitle}>Choose Your Master&apos;s Style</Text>
-          <View style={styles.artistGrid}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.carouselContainer}
+            style={styles.carousel}>
             {Object.keys(ARTIST_STYLES).map(key => renderArtistCard(key as ArtistStyle))}
-          </View>
+          </ScrollView>
+        </View>
+
+        <View style={styles.artistSelector}>
+          <Text style={styles.sectionTitle}>Japanese Art Styles</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.carouselContainer}
+            style={styles.carousel}>
+            {Object.keys(ANIME_STYLES).map(key => renderAnimeCard(key as AnimeStyle))}
+          </ScrollView>
         </View>
 
         <View style={styles.ctaContainer}>
@@ -388,9 +433,9 @@ export default function TransformScreen() {
           {user && (localCredits !== null ? localCredits > 0 : user.imageGenerationsRemaining > 0) ? (
             // Si el usuario tiene créditos, muestra el botón para generar
             <TouchableOpacity
-              style={[styles.transformButton, (!selectedImage || !selectedArtist || isTransforming) && styles.disabledButton]}
+              style={[styles.transformButton, (!selectedImage || (!selectedArtist && !selectedAnime) || isTransforming) && styles.disabledButton]}
               onPress={transformImage}
-              disabled={!selectedImage || !selectedArtist || isTransforming}>
+              disabled={!selectedImage || (!selectedArtist && !selectedAnime) || isTransforming}>
               <LinearGradient colors={['#FFD700', '#FFA500']} style={styles.buttonGradient}>
                 {isTransforming && <ActivityIndicator size="small" color="#000" style={{ marginRight: 10 }} />}
                 <Text style={styles.buttonText}>
@@ -559,5 +604,47 @@ const styles = StyleSheet.create({
   statusText: {
     color: '#FFF',
     marginLeft: 10,
+  },
+  carousel: {
+    marginBottom: 16,
+  },
+  carouselContainer: {
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  carouselCard: {
+    width: 120,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  selectedCarouselCard: {
+    borderColor: '#FFD700',
+  },
+  carouselImage: {
+    width: '100%',
+    height: 90,
+  },
+  carouselInfo: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 6,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+  },
+  carouselName: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  carouselCheckmark: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 10,
   },
 });
