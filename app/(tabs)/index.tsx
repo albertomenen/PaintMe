@@ -25,6 +25,7 @@ import { ImageUtils } from '../../lib/imageUtils';
 import { NotificationService } from '../../lib/notifications';
 import { ReplicateService } from '../../lib/replicate';
 import { Analytics } from '../../lib/analytics';
+import LoadingScreen from '../../components/LoadingScreen';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width - 32;
@@ -46,10 +47,11 @@ export default function TransformScreen() {
   const { user, canTransform, addTransformation, updateTransformation, decrementImageGenerations, loading, updateTrigger } = useUser();
   const { settings: notificationSettings } = useNotificationSettings();
   const [transformStartTime, setTransformStartTime] = useState<number | null>(null);
+  const [imageAutoSaved, setImageAutoSaved] = useState(false);
 
   // State to force re-render when user data changes
   const [, forceUpdate] = React.useReducer(x => x + 1, 0);
-  
+
   // Local credits override for immediate display
   const [localCredits, setLocalCredits] = useState<number | null>(null);
 
@@ -124,6 +126,7 @@ export default function TransformScreen() {
         }
         setSelectedImage(uri);
         setTransformedImage(null);
+        setImageAutoSaved(false);
         Analytics.trackImageSelected('gallery');
       }
     } catch (error) {
@@ -159,6 +162,7 @@ export default function TransformScreen() {
         }
         setSelectedImage(uri);
         setTransformedImage(null);
+        setImageAutoSaved(false);
         Analytics.trackImageSelected('camera');
       }
     } catch (error) {
@@ -185,6 +189,7 @@ export default function TransformScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsTransforming(true);
     setTransformedImage(null);
+    setImageAutoSaved(false);
     setTransformationProgress({ uploading: true, processing: false, error: null });
     setTransformStartTime(Date.now());
     
@@ -248,16 +253,28 @@ export default function TransformScreen() {
         const processingTime = transformStartTime ? (Date.now() - transformStartTime) / 1000 : 0;
         Analytics.trackImageTransformationCompleted(artistName, processingTime);
         
+        // Auto-save the transformed image to gallery
+        try {
+          await ImageUtils.saveToGallery(result.imageUrl);
+          console.log('✅ Image automatically saved to gallery');
+          setImageAutoSaved(true);
+          Analytics.trackImageSaved();
+        } catch (saveError) {
+          console.error('❌ Failed to auto-save image:', saveError);
+          setImageAutoSaved(false);
+          // Don't throw error - transformation was successful, just saving failed
+        }
+
         // Enviar notificación de éxito si está habilitada
         if (notificationSettings.transformationComplete) {
           await NotificationService.sendImageTransformedNotification();
         }
-        
+
         // Programar recordatorio para crear más arte (24 horas) si está habilitado
         if (notificationSettings.reminders && user?.imageGenerationsRemaining && user.imageGenerationsRemaining > 0) {
           await NotificationService.sendReminderNotification(24);
         }
-        
+
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
         await updateTransformation(transformation.id, { status: 'failed' });
@@ -275,22 +292,13 @@ export default function TransformScreen() {
     }
   };
 
-  const renderTransformationStatus = () => {
-    if (!isTransforming) return null;
-
-    let statusText = '';
+  const getLoadingMessage = () => {
     if (transformationProgress.uploading) {
-      statusText = 'Uploading your image...';
+      return 'Uploading your image...';
     } else if (transformationProgress.processing) {
-      statusText = 'The AI is creating your masterpiece...';
+      return 'Creating your masterpiece...';
     }
-
-    return (
-      <View style={styles.statusContainer}>
-        <ActivityIndicator size="small" color="#FFF" />
-        <Text style={styles.statusText}>{statusText}</Text>
-      </View>
-    );
+    return 'Preparing transformation...';
   };
 
   const handleSaveImage = async () => {
@@ -384,8 +392,17 @@ export default function TransformScreen() {
           </TouchableOpacity>
         </View>
         {transformedImage && (
-          <TouchableOpacity style={styles.saveButton} onPress={handleSaveImage}>
-            <Ionicons name="download-outline" size={24} color="#FFF" />
+          <TouchableOpacity
+            style={[styles.saveButton, imageAutoSaved && styles.savedButton]}
+            onPress={handleSaveImage}>
+            {imageAutoSaved ? (
+              <View style={styles.savedIndicator}>
+                <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+                <Text style={styles.savedText}>Saved</Text>
+              </View>
+            ) : (
+              <Ionicons name="download-outline" size={24} color="#FFF" />
+            )}
           </TouchableOpacity>
         )}
       </View>
@@ -402,8 +419,6 @@ export default function TransformScreen() {
         </View>
 
         {renderImageContainer()}
-
-        {renderTransformationStatus()}
 
         <View style={styles.artistSelector}>
           <Text style={styles.sectionTitle}>Choose Your Master&apos;s Style</Text>
@@ -455,6 +470,11 @@ export default function TransformScreen() {
           )}
         </View>
       </ScrollView>
+
+      <LoadingScreen
+        visible={isTransforming}
+        message={getLoadingMessage()}
+      />
     </SafeAreaView>
   );
 }
@@ -522,8 +542,24 @@ const styles = StyleSheet.create({
     top: 10,
     right: 10,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    padding: 10,
-    borderRadius: 20,
+    padding: 12,
+    borderRadius: 25,
+    minWidth: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  savedButton: {
+    backgroundColor: 'rgba(76, 175, 80, 0.9)',
+  },
+  savedIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  savedText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   artistSelector: {
     paddingHorizontal: 24,
@@ -594,16 +630,6 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 18,
     fontWeight: 'bold',
-  },
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-  },
-  statusText: {
-    color: '#FFF',
-    marginLeft: 10,
   },
   carousel: {
     marginBottom: 16,
