@@ -13,7 +13,7 @@ import {
 
 import { ThemedText } from '../../components/ThemedText';
 import { ThemedView } from '../../components/ThemedView';
-import { ARTIST_STYLES } from '../../constants/Config';
+import { ARTIST_STYLES, ANIME_STYLES } from '../../constants/Config';
 import { useUser } from '../../hooks/useUser';
 import { ImageUtils } from '../../lib/imageUtils';
 import { Analytics } from '../../lib/analytics';
@@ -21,38 +21,13 @@ import { Analytics } from '../../lib/analytics';
 const { width } = Dimensions.get('window');
 const imageSize = (width - 60) / 2;
 
-// Mock data - in a real app, this would come from Supabase
-const mockTransformations = [
-  {
-    id: '1',
-    originalImageUrl: 'https://example.com/original1.jpg',
-    transformedImageUrl: 'https://replicate.delivery/pbxt/example1.jpg',
-    artistStyle: 'caravaggio',
-    createdAt: '2024-01-15T10:00:00Z',
-    status: 'completed'
-  },
-  {
-    id: '2',
-    originalImageUrl: 'https://example.com/original2.jpg',
-    transformedImageUrl: 'https://replicate.delivery/pbxt/example2.jpg',
-    artistStyle: 'velazquez',
-    createdAt: '2024-01-14T15:30:00Z',
-    status: 'completed'
-  },
-  {
-    id: '3',
-    originalImageUrl: 'https://example.com/original3.jpg',
-    transformedImageUrl: 'https://replicate.delivery/pbxt/example3.jpg',
-    artistStyle: 'goya',
-    createdAt: '2024-01-13T09:15:00Z',
-    status: 'completed'
-  },
-];
+
 
 export default function GalleryScreen() {
   const { user, transformations, loading } = useUser();
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'caravaggio' | 'velazquez' | 'goya'>('all');
+  const [selectedFilter, setSelectedFilter] = useState<'all' | keyof typeof ARTIST_STYLES | keyof typeof ANIME_STYLES>('all');
+  const [selectedCategory, setSelectedCategory] = useState<'artists' | 'anime'>('artists');
 
   // Track gallery view
   React.useEffect(() => {
@@ -76,33 +51,11 @@ export default function GalleryScreen() {
     selectedFilter === 'all' || t.artistStyle === selectedFilter
   );
 
-  const renderFilterButton = (filter: typeof selectedFilter, label: string, icon?: string) => (
-    <TouchableOpacity
-      key={filter}
-      style={[
-        styles.filterButton,
-        selectedFilter === filter && styles.filterButtonActive
-      ]}
-      onPress={() => setSelectedFilter(filter)}
-    >
-      <LinearGradient
-        colors={selectedFilter === filter ? ['#667eea', '#764ba2'] : ['#f8f9fa', '#e9ecef']}
-        style={styles.filterGradient}
-      >
-        {icon && <ThemedText style={styles.filterIcon}>{icon}</ThemedText>}
-        <ThemedText style={[
-          styles.filterText,
-          selectedFilter === filter && styles.filterTextActive
-        ]}>
-          {label}
-        </ThemedText>
-      </LinearGradient>
-    </TouchableOpacity>
-  );
 
   const renderTransformationCard = (transformation: any) => {
-    const artist = ARTIST_STYLES[transformation.artistStyle as keyof typeof ARTIST_STYLES];
-    
+    const artist = ARTIST_STYLES[transformation.artistStyle as keyof typeof ARTIST_STYLES] ||
+                  ANIME_STYLES[transformation.artistStyle as keyof typeof ANIME_STYLES];
+
     if (!transformation.transformedImageUrl) return null;
     
     return (
@@ -122,7 +75,7 @@ export default function GalleryScreen() {
         >
           <View style={styles.imageInfo}>
             <ThemedText style={styles.artistTag}>
-              {artist.icon} {artist.name}
+              {artist.name}
             </ThemedText>
             <ThemedText style={styles.dateText}>
               {new Date(transformation.createdAt).toLocaleDateString()}
@@ -157,15 +110,87 @@ export default function GalleryScreen() {
       </LinearGradient>
 
       <ThemedView style={styles.content}>
-        {/* Filter Buttons */}
-        <View style={styles.filtersContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.filtersRow}>
-              {renderFilterButton('all', 'All Styles')}
-              {renderFilterButton('caravaggio', 'Caravaggio', '🎭')}
-              {renderFilterButton('velazquez', 'Velázquez', '👑')}
-              {renderFilterButton('goya', 'Goya', '🖼️')}
-            </View>
+        {/* Category Selector */}
+        <View style={styles.categoryContainer}>
+          <TouchableOpacity
+            style={[styles.categoryButton, selectedCategory === 'artists' && styles.categoryButtonActive]}
+            onPress={() => { setSelectedCategory('artists'); setSelectedFilter('all'); }}
+          >
+            <LinearGradient
+              colors={selectedCategory === 'artists' ? ['#667eea', '#764ba2'] : ['#f8f9fa', '#e9ecef']}
+              style={styles.categoryGradient}
+            >
+              <ThemedText style={[styles.categoryText, selectedCategory === 'artists' && styles.categoryTextActive]}>🎨 Classic Artists</ThemedText>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.categoryButton, selectedCategory === 'anime' && styles.categoryButtonActive]}
+            onPress={() => { setSelectedCategory('anime'); setSelectedFilter('all'); }}
+          >
+            <LinearGradient
+              colors={selectedCategory === 'anime' ? ['#ff6b6b', '#ee5a52'] : ['#f8f9fa', '#e9ecef']}
+              style={styles.categoryGradient}
+            >
+              <ThemedText style={[styles.categoryText, selectedCategory === 'anime' && styles.categoryTextActive]}>⚡ Anime Styles</ThemedText>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+
+        {/* Style Carousel */}
+        <View style={styles.stylesContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stylesCarousel}>
+            <TouchableOpacity
+              style={[styles.styleCard, selectedFilter === 'all' && styles.styleCardActive]}
+              onPress={() => setSelectedFilter('all')}
+            >
+              <LinearGradient
+                colors={selectedFilter === 'all' ? ['#667eea', '#764ba2'] : ['#ffffff', '#f8f9fa']}
+                style={styles.styleCardGradient}
+              >
+                <ThemedText style={styles.styleEmoji}>🌟</ThemedText>
+                <ThemedText style={[styles.styleName, selectedFilter === 'all' && styles.styleNameActive]}>All</ThemedText>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {selectedCategory === 'artists' ?
+              Object.entries(ARTIST_STYLES).map(([key, style]) => (
+                <TouchableOpacity
+                  key={key}
+                  style={[styles.styleCard, selectedFilter === key && styles.styleCardActive]}
+                  onPress={() => setSelectedFilter(key as keyof typeof ARTIST_STYLES)}
+                >
+                  <LinearGradient
+                    colors={selectedFilter === key ? style.gradientColors : ['#ffffff', '#f8f9fa']}
+                    style={styles.styleCardGradient}
+                  >
+                    <View style={styles.styleImageContainer}>
+                      <Image source={style.sampleImage} style={styles.styleImage} />
+                    </View>
+                    <ThemedText style={[styles.styleName, selectedFilter === key && styles.styleNameActive]}>{style.name}</ThemedText>
+                    <ThemedText style={[styles.stylePeriod, selectedFilter === key && styles.stylePeriodActive]}>{style.period}</ThemedText>
+                  </LinearGradient>
+                </TouchableOpacity>
+              )) :
+              Object.entries(ANIME_STYLES).map(([key, style]) => (
+                <TouchableOpacity
+                  key={key}
+                  style={[styles.styleCard, selectedFilter === key && styles.styleCardActive]}
+                  onPress={() => setSelectedFilter(key as keyof typeof ANIME_STYLES)}
+                >
+                  <LinearGradient
+                    colors={selectedFilter === key ? style.gradientColors : ['#ffffff', '#f8f9fa']}
+                    style={styles.styleCardGradient}
+                  >
+                    <View style={styles.styleImageContainer}>
+                      <Image source={style.sampleImage} style={styles.styleImage} />
+                    </View>
+                    <ThemedText style={[styles.styleName, selectedFilter === key && styles.styleNameActive]}>{style.name}</ThemedText>
+                    <ThemedText style={[styles.stylePeriod, selectedFilter === key && styles.stylePeriodActive]}>{style.period}</ThemedText>
+                  </LinearGradient>
+                </TouchableOpacity>
+              ))
+            }
           </ScrollView>
         </View>
 
@@ -372,5 +397,96 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#999',
     lineHeight: 20,
+  },
+  categoryContainer: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    gap: 10,
+  },
+  categoryButton: {
+    flex: 1,
+    borderRadius: 15,
+    overflow: 'hidden',
+  },
+  categoryButtonActive: {
+    transform: [{ scale: 1.02 }],
+  },
+  categoryGradient: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  categoryText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+  },
+  categoryTextActive: {
+    color: 'white',
+  },
+  stylesContainer: {
+    marginBottom: 20,
+  },
+  stylesCarousel: {
+    paddingRight: 20,
+  },
+  styleCard: {
+    width: 120,
+    height: 160,
+    marginRight: 15,
+    borderRadius: 15,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  styleCardActive: {
+    transform: [{ scale: 1.05 }],
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  styleCardGradient: {
+    flex: 1,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  styleImageContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    overflow: 'hidden',
+    marginBottom: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  styleImage: {
+    width: '100%',
+    height: '100%',
+  },
+  styleEmoji: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  styleName: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    color: '#333',
+    marginBottom: 2,
+  },
+  styleNameActive: {
+    color: 'white',
+  },
+  stylePeriod: {
+    fontSize: 10,
+    textAlign: 'center',
+    color: '#666',
+    opacity: 0.8,
+  },
+  stylePeriodActive: {
+    color: 'rgba(255,255,255,0.9)',
   },
 }); 

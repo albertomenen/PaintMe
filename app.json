@@ -2,10 +2,12 @@
   "expo": {
     "name": "PaintMe",
     "slug": "PaintMe",
-    "version": "4.8.0",
+    "version": "5.2.0",
     "orientation": "portrait",
     "scheme": "paintme",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "userInterfaceStyle": "automatic",
     "icon": "./assets/images/icon2.png",
     "ios": {
@@ -16,7 +18,19 @@
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "PaintMe needs access to your camera to take photos that you can transform into beautiful artwork using AI. Your photos are processed securely and never shared.",
         "NSPhotoLibraryUsageDescription": "PaintMe needs access to your photo library to select images that will be transformed into artistic masterpieces. Choose any photo to turn it into art in the style of famous painters.",
-        "NSPhotoLibraryAddUsageDescription": "PaintMe needs permission to save your newly created artworks to your photo library. Your AI-generated art will be saved so you can share and enjoy it forever."
+        "NSPhotoLibraryAddUsageDescription": "PaintMe needs permission to save your newly created artworks to your photo library. Your AI-generated art will be saved so you can share and enjoy it forever.",
+        "FacebookAppID": "4128789830705741",
+        "FacebookDisplayName": "Artme - Art Photo Maker",
+        "FacebookClientToken": "b87428adf35851c2cf322d438f786de8",
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "paintme",
+              "com.menensito.PaintMe",
+              "fb4128789830705741"
+            ]
+          }
+        ]
       },
       "storeKitTestConfiguration": "./StoreKitTestConfiguration.storekit"
     },
@@ -30,7 +44,9 @@
     "notification": {
       "icon": "./assets/images/notification-icon2.png",
       "color": "#FFD700",
-      "sounds": ["./assets/sounds/notification.wav"],
+      "sounds": [
+        "./assets/sounds/notification.wav"
+      ],
       "androidMode": "default",
       "androidCollapsedTitle": "#{unread_notifications} nuevas notificaciones"
     },
@@ -50,8 +66,19 @@
           "backgroundColor": "#ffffff"
         }
       ],
+      [
+    "react-native-fbsdk-next",
+    {
+      "appID": "4128789830705741",
+      "clientToken": "b87428adf35851c2cf322d438f786de8",
+      "displayName": "Artme - Art Photo Maker",
+      "scheme": "fb4128789830705741"
+    }
+  ],
       "expo-secure-store",
-      ["expo-apple-authentication"],
+      [
+        "expo-apple-authentication"
+      ],
       [
         "expo-notifications",
         {
@@ -67,7 +94,7 @@
             "minSdkVersion": 26
           },
           "ios": {
-              "deploymentTarget": "15.1"
+            "deploymentTarget": "15.1"
           }
         }
       ]

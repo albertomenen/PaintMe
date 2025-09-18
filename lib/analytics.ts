@@ -1,7 +1,7 @@
 import { Mixpanel } from 'mixpanel-react-native';
 
 // Mixpanel configuration
-const MIXPANEL_TOKEN = process.env.EXPO_PUBLIC_MIXPANEL_TOKEN || 'YOUR_MIXPANEL_TOKEN_HERE';
+const MIXPANEL_TOKEN = process.env.EXPO_PUBLIC_MIXPANEL_TOKEN || 'ea8d5a82b7acec2b782ede1f1225e6f2';
 const trackAutomaticEvents = false;
 
 class AnalyticsService {
