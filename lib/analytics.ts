@@ -1,42 +1,24 @@
-import { Mixpanel } from 'mixpanel-react-native';
-
-// Mixpanel configuration
-const MIXPANEL_TOKEN = process.env.EXPO_PUBLIC_MIXPANEL_TOKEN || 'ea8d5a82b7acec2b782ede1f1225e6f2';
-const trackAutomaticEvents = false;
-
 class AnalyticsService {
-  private mixpanel: Mixpanel;
   private isInitialized: boolean = false;
 
   constructor() {
-    this.mixpanel = new Mixpanel(MIXPANEL_TOKEN, trackAutomaticEvents);
   }
 
   async init(): Promise<void> {
     try {
-      await this.mixpanel.init();
       this.isInitialized = true;
-      console.log('✅ Mixpanel initialized successfully');
+      console.log('✅ Analytics initialized successfully');
     } catch (error) {
-      console.error('❌ Failed to initialize Mixpanel:', error);
+      console.error('❌ Failed to initialize Analytics:', error);
     }
   }
 
   // User identification and properties
   async identifyUser(userId: string, email?: string): Promise<void> {
     if (!this.isInitialized) return;
-    
+
     try {
-      await this.mixpanel.identify(userId);
-      
-      if (email) {
-        await this.mixpanel.getPeople().set({
-          '$email': email,
-          '$name': email.split('@')[0],
-        });
-      }
-      
-      console.log('👤 User identified in Mixpanel:', userId);
+      console.log('👤 User identified:', userId);
     } catch (error) {
       console.error('❌ Failed to identify user:', error);
     }
@@ -44,9 +26,9 @@ class AnalyticsService {
 
   async setUserProperties(properties: Record<string, any>): Promise<void> {
     if (!this.isInitialized) return;
-    
+
     try {
-      await this.mixpanel.getPeople().set(properties);
+      console.log('👤 User properties set:', properties);
     } catch (error) {
       console.error('❌ Failed to set user properties:', error);
     }
@@ -169,9 +151,6 @@ class AnalyticsService {
       price,
       credits_received: creditsReceived,
     });
-
-    // Track revenue
-    await this.mixpanel.getPeople().trackCharge(price);
   }
 
   async trackPurchaseFailed(packageId: string, error: string): Promise<void> {
@@ -234,7 +213,6 @@ class AnalyticsService {
         ...properties,
       };
 
-      await this.mixpanel.track(eventName, eventProperties);
       console.log('📊 Event tracked:', eventName, eventProperties);
     } catch (error) {
       console.error('❌ Failed to track event:', eventName, error);
@@ -244,9 +222,9 @@ class AnalyticsService {
   // Session management
   async startTimedEvent(eventName: string): Promise<void> {
     if (!this.isInitialized) return;
-    
+
     try {
-      await this.mixpanel.timeEvent(eventName);
+      console.log('⏱️ Timed event started:', eventName);
     } catch (error) {
       console.error('❌ Failed to start timed event:', error);
     }
@@ -255,21 +233,19 @@ class AnalyticsService {
   // Reset user data (for logout)
   async reset(): Promise<void> {
     if (!this.isInitialized) return;
-    
+
     try {
-      await this.mixpanel.reset();
-      console.log('🔄 Mixpanel data reset');
+      console.log('🔄 Analytics data reset');
     } catch (error) {
-      console.error('❌ Failed to reset Mixpanel:', error);
+      console.error('❌ Failed to reset Analytics:', error);
     }
   }
 
   // Opt out of tracking (for privacy compliance)
   async optOut(): Promise<void> {
     if (!this.isInitialized) return;
-    
+
     try {
-      await this.mixpanel.optOutTracking();
       console.log('🔒 User opted out of tracking');
     } catch (error) {
       console.error('❌ Failed to opt out:', error);
@@ -278,9 +254,8 @@ class AnalyticsService {
 
   async optIn(): Promise<void> {
     if (!this.isInitialized) return;
-    
+
     try {
-      await this.mixpanel.optInTracking();
       console.log('✅ User opted in to tracking');
     } catch (error) {
       console.error('❌ Failed to opt in:', error);

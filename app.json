@@ -2,7 +2,7 @@
   "expo": {
     "name": "PaintMe",
     "slug": "PaintMe",
-    "version": "5.2.0",
+    "version": "5.6.0",
     "orientation": "portrait",
     "scheme": "paintme",
     "assetBundlePatterns": [
@@ -36,13 +36,12 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon2.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.menensito.PaintMe"
     },
     "notification": {
-      "icon": "./assets/images/notification-icon2.png",
+      "icon": "./assets/images/icon2.png",
       "color": "#FFD700",
       "sounds": [
         "./assets/sounds/notification.wav"
