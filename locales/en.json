@@ -101,6 +101,15 @@
       "offerNotAvailable": "This special offer is no longer available"
     }
   },
+  "welcome": {
+    "dream": "Dream",
+    "turnYour": "Turn your",
+    "photos": "Photos",
+    "intoArt": "into Art Pieces",
+    "claimFree": "Claim your FREE transformation now",
+    "haveAccount": "Already have an account?",
+    "signIn": "Sign In"
+  },
   "common": {
     "loading": "Loading...",
     "error": "Error",
@@ -109,5 +118,153 @@
     "ok": "OK",
     "yes": "Yes",
     "no": "No"
+  },
+  "auth": {
+    "loading": {
+      "signingIn": "Signing you in...",
+      "creatingAccount": "Creating your account...",
+      "preparingExperience": "Preparing your artistic experience..."
+    },
+    "promo": {
+      "title": "New users get a FREE transformation!",
+      "subtitle": "Sign up now to claim your gift",
+      "short": "🎉 Get 1 FREE transformation - Sign up now!"
+    },
+    "login": {
+      "headerSubtitle": "Transform any photo into Masterpieces",
+      "promoBanner": "🎉 Get 1 FREE transformation - Sign up now!",
+      "title": "Welcome Back",
+      "subtitle": "Sign in to continue your artistic journey",
+      "emailPlaceholder": "Email",
+      "passwordPlaceholder": "Password",
+      "signIn": "Sign In",
+      "signingIn": "Signing In...",
+      "or": "or",
+      "noAccount": "Don't have an account?",
+      "signUpLink": "Sign Up"
+    },
+    "signup": {
+      "freeCredit": {
+        "title": "🎉 Welcome Gift!",
+        "subtitle": "Get 1 FREE transformation upon signup",
+        "short": "🎉 Welcome! Get 1 FREE transformation"
+      },
+      "headerTitle": "Join PaintMe",
+      "headerSubtitle": "Begin your artistic transformation",
+      "promoBanner": "🎉 Welcome! Get 1 FREE transformation",
+      "title": "Create Account",
+      "subtitle": "Start creating masterpieces today",
+      "emailPlaceholder": "Email",
+      "passwordPlaceholder": "Password",
+      "confirmPasswordPlaceholder": "Confirm Password",
+      "createAccount": "Create Account",
+      "creatingAccount": "Creating Account...",
+      "termsPrefix": "By creating an account, you agree to our",
+      "termsOfService": "Terms of Service",
+      "and": "and",
+      "privacyPolicy": "Privacy Policy",
+      "haveAccount": "Already have an account?",
+      "signInLink": "Sign In"
+    }
+  },
+  "profile": {
+    "header": {
+      "memberSince": "Member since"
+    },
+    "credits": {
+      "title": "Your Masterpieces",
+      "remaining": "remaining generations",
+      "freeTrialUsed": "You've used your free generation! Buy more to keep creating masterpieces.",
+      "welcomeFreeTrial": "Welcome! You have one free transformation to try PaintMe."
+    },
+    "purchase": {
+      "sectionTitle": "Don't let inspiration wait",
+      "alternativeTitle": "Create your next masterpiece",
+      "popular": "MOST POPULAR",
+      "transformations": "Transformations",
+      "each": "each",
+      "restorePurchases": "Restore Purchases",
+      "successTitle": "Purchase Successful!",
+      "successMessage": "{{credits}} transformations added to your account!",
+      "errorTitle": "Purchase Error",
+      "errorMessage": "Could not process payment",
+      "unexpectedError": "An unexpected error occurred. Please try again."
+    },
+    "account": {
+      "sectionTitle": "Account",
+      "email": "Email",
+      "totalTransformations": "Total Transformations",
+      "completedArtworks": "Completed Artworks",
+      "favoriteArtist": "Favorite Artist",
+      "notSelected": "Not selected"
+    },
+    "settings": {
+      "sectionTitle": "Settings",
+      "notifications": "Notifications",
+      "language": "Language / Idioma",
+      "helpSupport": "Help & Support",
+      "termsPrivacy": "Terms & Privacy"
+    },
+    "signOut": {
+      "button": "Sign Out",
+      "confirmTitle": "Sign Out",
+      "confirmMessage": "Are you sure you want to sign out?",
+      "cancel": "Cancel",
+      "confirm": "Sign Out",
+      "errorMessage": "Failed to sign out."
+    },
+    "deleteAccount": {
+      "button": "Delete Account",
+      "confirmTitle": "Delete Account",
+      "confirmMessage": "Are you sure you want to permanently delete your account? This action cannot be undone and will remove all your data, transformations, and purchases.",
+      "finalConfirmTitle": "Final Confirmation",
+      "finalConfirmMessage": "This will permanently delete your account and all associated data. Type DELETE to confirm.",
+      "cancel": "Cancel",
+      "confirm": "DELETE ACCOUNT",
+      "successTitle": "Account Deleted",
+      "successMessage": "Your account has been permanently deleted.",
+      "errorMessage": "Failed to delete account. Please contact support at alberto@notjustvpn.com",
+      "unexpectedError": "An unexpected error occurred. Please contact support."
+    },
+    "restore": {
+      "successTitle": "Purchases Restored",
+      "successMessage": "Your previous purchases have been successfully restored.",
+      "noPurchasesTitle": "No Purchases",
+      "noPurchasesMessage": "No previous purchases found to restore.",
+      "errorMessage": "Could not restore purchases."
+    },
+    "support": {
+      "emailSubject": "PaintMe App Support",
+      "emailBody": "Hi Alberto,\\n\\nI need help with the PaintMe app.\\n\\n",
+      "noEmailApp": "No email app available. Please email us at: alberto@notjustvpn.com",
+      "emailError": "Could not open email app. Please contact: alberto@notjustvpn.com"
+    },
+    "terms": {
+      "noBrowser": "Could not open browser. Please visit: https://menendez.dev/terms",
+      "linkError": "Could not open link. Please visit: https://menendez.dev/terms"
+    },
+    "subscription": {
+      "title": "Premium Subscription",
+      "activeBadge": "ACTIVE",
+      "activeTitle": "You are Premium!",
+      "activeDescription": "Enjoy unlimited transformations",
+      "renewsOn": "Renews on",
+      "expiresOn": "Expires on",
+      "manage": "Manage Subscription",
+      "cancel": "Cancel Subscription",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "unlimitedTransformations": "Unlimited Transformations",
+      "allStyles": "All Art Styles",
+      "priorityProcessing": "Priority Processing",
+      "bestValue": "Best Value",
+      "save": "Save {{percent}}%",
+      "perWeek": "/week",
+      "perMonth": "/month",
+      "perYear": "/year",
+      "subscribeButton": "Subscribe Now",
+      "orBuyCredits": "Or buy transformation packs"
+    }
   }
 }

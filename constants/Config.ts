@@ -92,7 +92,7 @@ export const ARTIST_STYLES = {
 
 export const ANIME_STYLES = {
   berserk: {
-    name: 'Berserk',
+    name: 'Kentaro Miura',
     fullName: 'Kentaro Miura Style',
     period: '1989-2021',
     description: 'Dark fantasy manga with incredibly detailed artwork and gothic atmosphere',
@@ -104,19 +104,19 @@ export const ANIME_STYLES = {
     gradientColors: ['#000000', '#2C2C2C', '#8B0000']
   },
   dragonball: {
-    name: 'Dragon Ball',
+    name: 'Toriyama',
     fullName: 'Akira Toriyama Style',
     period: '1984-1995',
     description: 'Clean, dynamic manga style with distinctive character designs and energy effects',
     characteristics: 'Clean lines, spiky hair, dynamic poses, energy auras',
     prompt: 'Convert this image to the iconic Dragon Ball art style by Akira Toriyama. Use clean, bold lines with minimal shading and bright, vibrant colors. Emphasize dynamic poses and expressions with characteristic spiky hair styles and large, expressive eyes. Add energy auras or ki effects around characters if applicable. The style should be bright, energetic, and optimistic with simple but effective shading using cell-shading techniques typical of classic anime/manga.',
-    sampleImage: require('../assets/images/dragonball.png'),
+    sampleImage: require('../assets/images/dragonballstyle.png'),
     primaryColor: '#FF8C00',
     secondaryColor: '#1E90FF',
     gradientColors: ['#FF8C00', '#FFD700', '#1E90FF']
   },
   naruto: {
-    name: 'Naruto',
+    name: 'Masashi',
     fullName: 'Masashi Kishimoto Style',
     period: '1999-2014',
     description: 'Ninja-themed manga with distinctive character designs and jutsu effects',
@@ -128,7 +128,7 @@ export const ANIME_STYLES = {
     gradientColors: ['#FF4500', '#FFA500', '#4169E1']
   },
   jojo: {
-    name: 'JoJo',
+    name: 'Hiroiko ',
     fullName: 'Hirohiko Araki Style',
     period: '1987-present',
     description: 'Flamboyant, muscular art style with dramatic poses and vibrant colors',
@@ -138,6 +138,18 @@ export const ANIME_STYLES = {
     primaryColor: '#FF1493',
     secondaryColor: '#00CED1',
     gradientColors: ['#FF1493', '#9932CC', '#00CED1']
+  },
+  anime: {
+    name: 'Anime',
+    fullName: 'Modern Anime Style',
+    period: 'Contemporary',
+    description: 'Modern webtoon and vibrant anime style with professional quality',
+    characteristics: 'Clean line art, smooth gradients, expressive features, cinematic lighting',
+    prompt: 'Transform the person in the input image into a high-quality, professional anime character. **Style:** Modern webtoon and vibrant anime style. The artwork should be a digital painting with clean, crisp line art, smooth gradients, and expressive features. The lighting should be professional and cinematic, creating a sense of depth. **Subject:** Faithfully capture the subject\'s key features, facial structure, hair color, and expression from the original photo, but reinterpret them in the specified anime style. **Quality:** Masterpiece, best quality, extremely detailed, high resolution. **Avoid:** Do not create a realistic or photorealistic image. Avoid 3D rendering, blurry or painterly styles, distorted anatomy, and watermarks.',
+    sampleImage: require('../assets/images/anime.png'),
+    primaryColor: '#FF69B4',
+    secondaryColor: '#00CED1',
+    gradientColors: ['#FF69B4', '#9932CC', '#00CED1']
   }
 } as const;
 

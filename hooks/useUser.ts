@@ -9,6 +9,8 @@ export interface User {
   imageGenerationsRemaining: number;
   totalTransformations: number;
   favoriteArtist?: string;
+  isPremium: boolean;
+  subscriptionType?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -111,11 +113,17 @@ export function useUser() {
         imageGenerationsRemaining: profile.image_generations_remaining ?? 1,
         totalTransformations: profile.total_transformations,
         favoriteArtist: profile.favorite_artist,
+        isPremium: profile.is_premium ?? false,
+        subscriptionType: profile.subscription_type,
         createdAt: profile.created_at,
         updatedAt: profile.updated_at,
       };
 
-      console.log('✅ Profile loaded - imageGenerationsRemaining:', userProfile.imageGenerationsRemaining);
+      console.log('✅ Profile loaded:', {
+        imageGenerationsRemaining: userProfile.imageGenerationsRemaining,
+        isPremium: userProfile.isPremium,
+        subscriptionType: userProfile.subscriptionType
+      });
 
       setUser(userProfile);
 
@@ -346,8 +354,18 @@ export function useUser() {
   };
 
   const canTransform = () => {
-    // Users can transform if they have image generations remaining
-    return user ? user.imageGenerationsRemaining > 0 : false;
+    if (!user) return false;
+
+    // Premium users have unlimited transformations
+    if (user.isPremium) {
+      console.log('✅ User is premium - unlimited transformations');
+      return true;
+    }
+
+    // Non-premium users need credits
+    const hasCredits = user.imageGenerationsRemaining > 0;
+    console.log('🔍 Non-premium user - has credits:', hasCredits);
+    return hasCredits;
   };
 
   return {

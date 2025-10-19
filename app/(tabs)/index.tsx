@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -15,8 +15,12 @@ import {
   Text,
   TouchableOpacity,
   View,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Modal,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import ConfettiCannon from 'react-native-confetti-cannon';
 
 import { ARTIST_STYLES, ArtistStyle, ANIME_STYLES, AnimeStyle } from '../../constants/Config';
 import { useUser } from '../../hooks/useUser';
@@ -26,11 +30,13 @@ import { NotificationService } from '../../lib/notifications';
 import { ReplicateService } from '../../lib/replicate';
 import { Analytics } from '../../lib/analytics';
 import LoadingScreen from '../../components/LoadingScreen';
+import RevenueCatPaywall from '../../components/RevenueCatPaywall';
 
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = width - 32;
-const IMAGE_SIZE = Math.min(width - 48, 300);
-
+const { width, height } = Dimensions.get('window');
+const CARD_WIDTH = width * 0.50; // Reducido más para zoom out
+const CARD_HEIGHT = height * 0.18; // Reducido más para zoom out
+const CARD_SPACING = 10; // Más compacto
+const IMAGE_SIZE = Math.min(width - 80, 200); // Mucho más pequeño
 
 export default function TransformScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -43,19 +49,25 @@ export default function TransformScreen() {
     processing: false,
     error: null as string | null,
   });
+  const [currentArtistIndex, setCurrentArtistIndex] = useState(0);
+  const [currentAnimeIndex, setCurrentAnimeIndex] = useState(0);
+  const [lastScrollX, setLastScrollX] = useState(0);
+
+  const artistScrollViewRef = useRef<ScrollView>(null);
+  const animeScrollViewRef = useRef<ScrollView>(null);
 
   const { user, canTransform, addTransformation, updateTransformation, decrementImageGenerations, loading, updateTrigger } = useUser();
   const { settings: notificationSettings } = useNotificationSettings();
   const [transformStartTime, setTransformStartTime] = useState<number | null>(null);
   const [imageAutoSaved, setImageAutoSaved] = useState(false);
 
-  // State to force re-render when user data changes
   const [, forceUpdate] = React.useReducer(x => x + 1, 0);
-
-  // Local credits override for immediate display
   const [localCredits, setLocalCredits] = useState<number | null>(null);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [showCreditsPaywall, setShowCreditsPaywall] = useState(false);
+  const [showSubscriptionPaywall, setShowSubscriptionPaywall] = useState(false);
+  const confettiRef = useRef<any>(null);
 
-  // Monitor user changes
   React.useEffect(() => {
     console.log('🏠 INDEX - User state changed:', {
       hasUser: !!user,
@@ -67,7 +79,6 @@ export default function TransformScreen() {
     });
   }, [user?.imageGenerationsRemaining, user?.id, user?.credits, loading, updateTrigger]);
 
-  // Force update when screen comes into focus (after returning from profile)
   useFocusEffect(
     React.useCallback(() => {
       const checkCreditsFromStorage = async () => {
@@ -87,10 +98,32 @@ export default function TransformScreen() {
           console.log('📱 INDEX - Error reading AsyncStorage:', error);
         }
       };
-      
+
       checkCreditsFromStorage();
     }, [])
   );
+
+  const handleArtistScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const scrollX = event.nativeEvent.contentOffset.x;
+    const newIndex = Math.round(scrollX / (CARD_WIDTH + CARD_SPACING));
+
+    if (newIndex !== currentArtistIndex && scrollX !== lastScrollX) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setCurrentArtistIndex(newIndex);
+      setLastScrollX(scrollX);
+    }
+  };
+
+  const handleAnimeScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const scrollX = event.nativeEvent.contentOffset.x;
+    const newIndex = Math.round(scrollX / (CARD_WIDTH + CARD_SPACING));
+
+    if (newIndex !== currentAnimeIndex && scrollX !== lastScrollX) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setCurrentAnimeIndex(newIndex);
+      setLastScrollX(scrollX);
+    }
+  };
 
   const requestPermissions = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -127,13 +160,16 @@ export default function TransformScreen() {
         setSelectedImage(uri);
         setTransformedImage(null);
         setImageAutoSaved(false);
-        Analytics.trackImageSelected('gallery');
+
+        // Track with isFirstImage parameter
+        const isFirstImage = !selectedImage;
+        Analytics.trackImageSelected('gallery', isFirstImage);
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to select image. Please try again.');
     }
   };
-  
+
   const takePhoto = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
@@ -163,7 +199,10 @@ export default function TransformScreen() {
         setSelectedImage(uri);
         setTransformedImage(null);
         setImageAutoSaved(false);
-        Analytics.trackImageSelected('camera');
+
+        // Track with isFirstImage parameter
+        const isFirstImage = !selectedImage;
+        Analytics.trackImageSelected('camera', isFirstImage);
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to take photo. Please try again.');
@@ -192,11 +231,13 @@ export default function TransformScreen() {
     setImageAutoSaved(false);
     setTransformationProgress({ uploading: true, processing: false, error: null });
     setTransformStartTime(Date.now());
-    
-    // Track transformation started
+
     const styleChoice = selectedArtist || selectedAnime;
     const artistName = selectedArtist ? ARTIST_STYLES[selectedArtist].name : ANIME_STYLES[selectedAnime!].name;
-    Analytics.trackImageTransformationStarted(artistName);
+
+    // Track transformation started with credits remaining
+    const creditsRemaining = user?.imageGenerationsRemaining || 0;
+    Analytics.trackImageTransformationStarted(artistName, creditsRemaining);
 
     try {
       const transformation = await addTransformation({
@@ -223,7 +264,7 @@ export default function TransformScreen() {
 
       setTransformationProgress({ uploading: false, processing: true, error: null });
 
-      await updateTransformation(transformation.id, { 
+      await updateTransformation(transformation.id, {
         status: 'processing',
         originalImageUrl: uploadResult.url!
       });
@@ -241,47 +282,54 @@ export default function TransformScreen() {
           status: 'completed',
           transformedImageUrl: result.imageUrl
         });
-        
-        // Decrementar generaciones después de transformación exitosa
+
         await decrementImageGenerations();
         console.log('🏠 INDEX: Credits decremented after transformation');
-        
-        // Force immediate UI update in index
+
         forceUpdate();
-        
-        // Track successful transformation
+
         const processingTime = transformStartTime ? (Date.now() - transformStartTime) / 1000 : 0;
-        Analytics.trackImageTransformationCompleted(artistName, processingTime);
-        
-        // Auto-save the transformed image to gallery
+        const newCreditsRemaining = (user?.imageGenerationsRemaining || 0) - 1;
+        const isFirstTransformation = (user?.imageGenerationsRemaining || 0) === 1; // Was 1 before decrement
+
+        // Track Masterpiece Created (THE WOW MOMENT)
+        Analytics.trackImageTransformationCompleted(
+          artistName,
+          processingTime,
+          isFirstTransformation,
+          newCreditsRemaining
+        );
+
         try {
           await ImageUtils.saveToGallery(result.imageUrl);
           console.log('✅ Image automatically saved to gallery');
           setImageAutoSaved(true);
-          Analytics.trackImageSaved();
+          Analytics.trackImageSaved(artistName);
         } catch (saveError) {
           console.error('❌ Failed to auto-save image:', saveError);
           setImageAutoSaved(false);
-          // Don't throw error - transformation was successful, just saving failed
         }
 
-        // Enviar notificación de éxito si está habilitada
         if (notificationSettings.transformationComplete) {
           await NotificationService.sendImageTransformedNotification();
         }
 
-        // Programar recordatorio para crear más arte (24 horas) si está habilitado
         if (notificationSettings.reminders && user?.imageGenerationsRemaining && user.imageGenerationsRemaining > 0) {
           await NotificationService.sendReminderNotification(24);
         }
 
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+        // Show result modal with confetti
+        setShowResultModal(true);
+        setTimeout(() => {
+          confettiRef.current?.start();
+        }, 300);
       } else {
         await updateTransformation(transformation.id, { status: 'failed' });
-        
-        // Track failed transformation
+
         Analytics.trackImageTransformationFailed(artistName, result.error || 'Unknown error');
-        
+
         Alert.alert('Transformation Failed', result.error || 'The AI failed to transform the image.');
         setTransformationProgress({ uploading: false, processing: false, error: 'Transformation Failed' });
       }
@@ -308,173 +356,490 @@ export default function TransformScreen() {
     Analytics.trackImageSaved();
   };
 
-  const getTransformButtonText = () => {
-    if (isTransforming) return 'Creating Art...';
-    if (!user) return '🔐 Sign Up to Transform';
-    if (loading) return 'Loading...';
-    if (!canTransform()) return '✨ Get More Credits';
-    return 'Transform Image';
-  };
-
-  const renderArtistCard = (artistKey: ArtistStyle) => {
+  const renderArtistCard = (artistKey: ArtistStyle, index: number) => {
     const artist = ARTIST_STYLES[artistKey];
     const isSelected = selectedArtist === artistKey;
+    const isCenterCard = index === currentArtistIndex;
 
     return (
       <TouchableOpacity
         key={artistKey}
-        style={[styles.carouselCard, isSelected && styles.selectedCarouselCard]}
+        style={[
+          styles.bigCard,
+          isCenterCard && styles.centerCard,
+          isSelected && styles.selectedBigCard
+        ]}
         onPress={() => {
+          const isFirstSelection = !selectedArtist && !selectedAnime;
           setSelectedArtist(artistKey);
           setSelectedAnime(null);
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          Analytics.trackArtistStyleSelected(artist.name);
-        }}>
-        <Image source={artist.sampleImage} style={styles.carouselImage} />
-        <View style={styles.carouselInfo}>
-          <Text style={styles.carouselName}>{artist.name}</Text>
-        </View>
-        {isSelected && (
-          <View style={styles.carouselCheckmark}>
-            <Ionicons name="checkmark-circle" size={20} color="#FFD700" />
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+          // CRITICAL: Track style selection with all parameters
+          Analytics.trackArtistStyleSelected(
+            artist.name,
+            'classic', // style_category
+            isFirstSelection,
+            1 // Will be incremented in Mixpanel
+          );
+        }}
+        activeOpacity={0.9}>
+        <LinearGradient
+          colors={artist.gradientColors}
+          style={styles.cardGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}>
+          <Image source={artist.sampleImage} style={styles.bigCardImage} contentFit="cover" />
+          <View style={[styles.cardOverlay, isSelected && styles.selectedOverlay]}>
+            <View style={styles.cardContent}>
+              <Text style={styles.bigCardTitle}>{artist.name}</Text>
+              <Text style={styles.bigCardSubtitle}>{artist.period}</Text>
+            </View>
           </View>
-        )}
+        </LinearGradient>
       </TouchableOpacity>
     );
   };
 
-  const renderAnimeCard = (animeKey: AnimeStyle) => {
+  const renderAnimeCard = (animeKey: AnimeStyle, index: number) => {
     const anime = ANIME_STYLES[animeKey];
     const isSelected = selectedAnime === animeKey;
+    const isCenterCard = index === currentAnimeIndex;
 
     return (
       <TouchableOpacity
         key={animeKey}
-        style={[styles.carouselCard, isSelected && styles.selectedCarouselCard]}
+        style={[
+          styles.bigCard,
+          isCenterCard && styles.centerCard,
+          isSelected && styles.selectedBigCard
+        ]}
         onPress={() => {
+          const isFirstSelection = !selectedArtist && !selectedAnime;
           setSelectedAnime(animeKey);
           setSelectedArtist(null);
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          Analytics.trackArtistStyleSelected(anime.name);
-        }}>
-        <Image source={anime.sampleImage} style={styles.carouselImage} />
-        <View style={styles.carouselInfo}>
-          <Text style={styles.carouselName}>{anime.name}</Text>
-        </View>
-        {isSelected && (
-          <View style={styles.carouselCheckmark}>
-            <Ionicons name="checkmark-circle" size={20} color="#FFD700" />
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+          // CRITICAL: Track style selection with all parameters
+          Analytics.trackArtistStyleSelected(
+            anime.name,
+            'japanese', // style_category
+            isFirstSelection,
+            1 // Will be incremented in Mixpanel
+          );
+        }}
+        activeOpacity={0.9}>
+        <LinearGradient
+          colors={anime.gradientColors}
+          style={styles.cardGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}>
+          <Image source={anime.sampleImage} style={styles.bigCardImage} contentFit="cover" />
+          <View style={[styles.cardOverlay, isSelected && styles.selectedOverlay]}>
+            <View style={styles.cardContent}>
+              <Text style={styles.bigCardTitle}>{anime.name}</Text>
+              <Text style={styles.bigCardSubtitle}>{anime.period}</Text>
+            </View>
           </View>
-        )}
+        </LinearGradient>
       </TouchableOpacity>
-    );
-  };
-
-  const renderImageContainer = () => {
-    const imageToDisplay = transformedImage || selectedImage;
-
-    return (
-      <View style={styles.imageContainer}>
-        {imageToDisplay ? (
-          <Image source={{ uri: imageToDisplay }} style={styles.image} contentFit="cover" />
-        ) : (
-          <View style={styles.placeholder}>
-            <Ionicons name="image-outline" size={60} color="rgba(255, 255, 255, 0.5)" />
-            <Text style={styles.placeholderText}>Select an image to transform</Text>
-          </View>
-        )}
-        <View style={styles.imageActions}>
-          <TouchableOpacity style={styles.actionButton} onPress={pickImage}>
-            <Ionicons name="images-outline" size={24} color="#FFF" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={takePhoto}>
-            <Ionicons name="camera-outline" size={24} color="#FFF" />
-          </TouchableOpacity>
-        </View>
-        {transformedImage && (
-          <TouchableOpacity
-            style={[styles.saveButton, imageAutoSaved && styles.savedButton]}
-            onPress={handleSaveImage}>
-            {imageAutoSaved ? (
-              <View style={styles.savedIndicator}>
-                <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
-                <Text style={styles.savedText}>Saved</Text>
-              </View>
-            ) : (
-              <Ionicons name="download-outline" size={24} color="#FFF" />
-            )}
-          </TouchableOpacity>
-        )}
-      </View>
     );
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient colors={['#1a1a1a', '#000']} style={StyleSheet.absoluteFill} />
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Paint Me</Text>
-          <Text style={styles.subtitle}>Transform your photos into timeless art</Text>
-        </View>
+      <LinearGradient colors={['#f5f7fa', '#ffffff']} style={StyleSheet.absoluteFill} />
 
-        {renderImageContainer()}
+      {/* Header con icono de settings */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.settingsButton}
+          onPress={() => router.push('/(tabs)/profile')}>
+          <Ionicons name="settings-outline" size={28} color="#333" />
+        </TouchableOpacity>
+      </View>
 
-        <View style={styles.artistSelector}>
-          <Text style={styles.sectionTitle}>Choose Your Master&apos;s Style</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.carouselContainer}
-            style={styles.carousel}>
-            {Object.keys(ARTIST_STYLES).map(key => renderArtistCard(key as ArtistStyle))}
-          </ScrollView>
-        </View>
-
-        <View style={styles.artistSelector}>
-          <Text style={styles.sectionTitle}>Japanese Art Styles</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.carouselContainer}
-            style={styles.carousel}>
-            {Object.keys(ANIME_STYLES).map(key => renderAnimeCard(key as AnimeStyle))}
-          </ScrollView>
-        </View>
-
-        <View style={styles.ctaContainer}>
-         
-          
-          {user && (localCredits !== null ? localCredits > 0 : user.imageGenerationsRemaining > 0) ? (
-            // Si el usuario tiene créditos, muestra el botón para generar
-            <TouchableOpacity
-              style={[styles.transformButton, (!selectedImage || (!selectedArtist && !selectedAnime) || isTransforming) && styles.disabledButton]}
-              onPress={transformImage}
-              disabled={!selectedImage || (!selectedArtist && !selectedAnime) || isTransforming}>
-              <LinearGradient colors={['#FFD700', '#FFA500']} style={styles.buttonGradient}>
-                {isTransforming && <ActivityIndicator size="small" color="#000" style={{ marginRight: 10 }} />}
-                <Text style={styles.buttonText}>
-                  {isTransforming ? 'Creando Arte...' : `Generar Imagen (${localCredits !== null ? localCredits : (user?.imageGenerationsRemaining || 0)} restantes)`}
+      {/* Credits Display Button - Prominente */}
+      {user && !user.isPremium && (
+        <View style={styles.creditsButtonContainer}>
+          <TouchableOpacity
+            style={styles.creditsButton}
+            onPress={() => router.push('/(tabs)/profile')}>
+            <LinearGradient
+              colors={['#667eea', '#764ba2']}
+              style={styles.creditsButtonGradient}>
+              <Ionicons name="images" size={24} color="#FFF" />
+              <View style={styles.creditsButtonTextContainer}>
+                <Text style={styles.creditsButtonNumber}>
+                  {localCredits !== null ? localCredits : (user?.imageGenerationsRemaining || 0)}
                 </Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          ) : (
-            // Si el usuario NO tiene créditos, muestra el botón para comprar
-            <TouchableOpacity
-              style={styles.transformButton}
-              onPress={() => router.push('/(tabs)/profile')}>
-              <LinearGradient colors={['#8e9eab', '#eef2f3']} style={styles.buttonGradient}>
-                <Text style={[styles.buttonText, { color: '#333' }]}>✨ Comprar más créditos</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          )}
+                <Text style={styles.creditsButtonLabel}>
+                  transformaciones restantes
+                </Text>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
+      )}
+
+      {/* Premium Badge */}
+      {user?.isPremium && (
+        <View style={styles.premiumBadgeContainer}>
+          <View style={styles.premiumBadgeLarge}>
+            <LinearGradient
+              colors={['#FFD700', '#FFA500']}
+              style={styles.premiumBadgeGradient}>
+              <Ionicons name="star" size={24} color="#FFF" />
+              <Text style={styles.premiumTextLarge}>Premium - Transformaciones Ilimitadas</Text>
+            </LinearGradient>
+          </View>
+        </View>
+      )}
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}>
+
+        {/* Título principal */}
+        <View style={styles.titleContainer}>
+          <Text style={styles.mainTitle}>Choose Your Art Style</Text>
+        </View>
+
+        {/* Sección de artistas clásicos */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Classic Artists</Text>
+        </View>
+
+        {/* Carrusel de artistas clásicos */}
+        <View style={styles.carouselSection}>
+          <ScrollView
+            ref={artistScrollViewRef}
+            horizontal
+            pagingEnabled={false}
+            decelerationRate="fast"
+            snapToInterval={CARD_WIDTH + CARD_SPACING}
+            snapToAlignment="center"
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.carouselContent}
+            onScroll={handleArtistScroll}
+            scrollEventThrottle={16}>
+            {Object.keys(ARTIST_STYLES).map((key, index) =>
+              renderArtistCard(key as ArtistStyle, index)
+            )}
+          </ScrollView>
+
+          {/* Indicador de página */}
+          <View style={styles.pageIndicator}>
+            {Object.keys(ARTIST_STYLES).map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.pageIndicatorDot,
+                  index === currentArtistIndex && styles.pageIndicatorDotActive
+                ]}
+              />
+            ))}
+          </View>
+        </View>
+
+        {/* Sección de artistas japoneses */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Japanese Artists</Text>
+        </View>
+
+        {/* Carrusel de estilos anime */}
+        <View style={styles.carouselSection}>
+          <ScrollView
+            ref={animeScrollViewRef}
+            horizontal
+            pagingEnabled={false}
+            decelerationRate="fast"
+            snapToInterval={CARD_WIDTH + CARD_SPACING}
+            snapToAlignment="center"
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.carouselContent}
+            onScroll={handleAnimeScroll}
+            scrollEventThrottle={16}>
+            {Object.keys(ANIME_STYLES).map((key, index) =>
+              renderAnimeCard(key as AnimeStyle, index)
+            )}
+          </ScrollView>
+
+          {/* Indicador de página */}
+          <View style={styles.pageIndicator}>
+            {Object.keys(ANIME_STYLES).map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.pageIndicatorDot,
+                  index === currentAnimeIndex && styles.pageIndicatorDotActive
+                ]}
+              />
+            ))}
+          </View>
+        </View>
+
+        {/* Título de selección de imagen */}
+        <View style={styles.selectImageHeader}>
+          <Text style={styles.selectImageTitle}>Selecciona una Imagen</Text>
+        </View>
+
+        {/* Botones de acción (galería y cámara) */}
+        <View style={styles.actionButtons}>
+          <View style={styles.actionButtonWrapper}>
+            <TouchableOpacity
+              style={styles.actionButtonLarge}
+              onPress={pickImage}>
+              <LinearGradient
+                colors={['#2d3436', '#000000']}
+                style={styles.actionButtonGradient}>
+                <Ionicons name="images" size={28} color="#FFF" />
+              </LinearGradient>
+            </TouchableOpacity>
+            <Text style={styles.actionButtonLabel}>Galería</Text>
+          </View>
+
+          <View style={styles.actionButtonWrapper}>
+            <TouchableOpacity
+              style={styles.actionButtonLarge}
+              onPress={takePhoto}>
+              <LinearGradient
+                colors={['#6c5ce7', '#a29bfe']}
+                style={styles.actionButtonGradient}>
+                <Ionicons name="camera" size={28} color="#FFF" />
+              </LinearGradient>
+            </TouchableOpacity>
+            <Text style={styles.actionButtonLabel}>Cámara</Text>
+          </View>
+        </View>
+
+        {/* Preview de imagen seleccionada - Más compacto */}
+        {selectedImage && (
+          <View style={styles.selectedImageContainer}>
+            <View style={styles.selectedImageWrapper}>
+              <Image
+                source={{ uri: selectedImage }}
+                style={styles.selectedImagePreview}
+                contentFit="cover"
+              />
+              <TouchableOpacity
+                style={styles.removeImageButton}
+                onPress={() => {
+                  setSelectedImage(null);
+                  setTransformedImage(null);
+                }}>
+                <Ionicons name="close-circle" size={28} color="#ff6b6b" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Botón Transform - SIEMPRE VISIBLE */}
+        <View style={styles.transformButtonContainer}>
+          <TouchableOpacity
+            style={[
+              styles.transformButton,
+              (!selectedImage || (!selectedArtist && !selectedAnime)) && styles.transformButtonDisabled
+            ]}
+            onPress={transformImage}
+            disabled={isTransforming || !selectedImage || (!selectedArtist && !selectedAnime)}>
+            <LinearGradient
+              colors={
+                isTransforming
+                  ? ['#95a5a6', '#7f8c8d']
+                  : (!selectedImage || (!selectedArtist && !selectedAnime))
+                  ? ['#bdc3c7', '#95a5a6']
+                  : ['#00b894', '#00cec9']
+              }
+              style={styles.transformButtonGradient}>
+              <Text style={styles.transformButtonText}>
+                {isTransforming
+                  ? 'Transformando...'
+                  : !selectedImage
+                  ? 'Selecciona una Imagen'
+                  : (!selectedArtist && !selectedAnime)
+                  ? 'Selecciona un Estilo'
+                  : 'Transformar Imagen'}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+
       </ScrollView>
+
+      {/* Bottom Tab Navigation */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/(tabs)')}>
+          <Ionicons name="bookmark" size={24} color="#6c5ce7" />
+          <Text style={styles.navItemTextActive}>Create</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/(tabs)/gallery')}>
+          <Ionicons name="paw-outline" size={24} color="#999" />
+          <Text style={styles.navItemText}>Filters</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/(tabs)/gallery')}>
+          <Ionicons name="albums-outline" size={24} color="#999" />
+          <Text style={styles.navItemText}>Gallery</Text>
+        </TouchableOpacity>
+      </View>
 
       <LoadingScreen
         visible={isTransforming}
         message={getLoadingMessage()}
       />
+
+      {/* Result Modal with Confetti */}
+      <Modal
+        visible={showResultModal}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setShowResultModal(false)}>
+        <SafeAreaView style={styles.resultModalContainer}>
+          <LinearGradient colors={['#f5f7fa', '#ffffff']} style={StyleSheet.absoluteFill} />
+
+          {/* Confetti */}
+          <ConfettiCannon
+            ref={confettiRef}
+            count={200}
+            origin={{ x: width / 2, y: -10 }}
+            autoStart={false}
+            fadeOut={true}
+          />
+
+          {/* Close Button */}
+          <TouchableOpacity
+            style={styles.closeModalButton}
+            onPress={() => setShowResultModal(false)}>
+            <Ionicons name="close" size={30} color="#333" />
+          </TouchableOpacity>
+
+          <ScrollView contentContainerStyle={styles.resultModalContent}>
+            {/* Success Title */}
+            <Text style={styles.resultModalTitle}>🎉 Image Created!</Text>
+
+            {/* Transformed Image */}
+            {transformedImage && (
+              <View style={styles.resultImageContainer}>
+                <Image
+                  source={{ uri: transformedImage }}
+                  style={styles.resultImage}
+                  contentFit="contain"
+                />
+              </View>
+            )}
+
+            {/* Prompt Text */}
+            <View style={styles.promptTextContainer}>
+              <Text style={styles.promptTextTitle}>
+                {user?.isPremium
+                  ? '¿Quieres crear más fotos?'
+                  : 'Remember, want to create more photos?'}
+              </Text>
+              {!user?.isPremium && (
+                <Text style={styles.promptTextSubtitle}>
+                  Compra créditos o suscríbete para transformaciones ilimitadas
+                </Text>
+              )}
+            </View>
+
+            {/* Action Buttons */}
+            {!user?.isPremium && (
+              <View style={styles.resultActionsContainer}>
+                {/* Buy Credits Button */}
+                <TouchableOpacity
+                  style={styles.resultActionButton}
+                  onPress={() => {
+                    setShowResultModal(false);
+                    setTimeout(() => setShowCreditsPaywall(true), 300);
+
+                    // CRITICAL: Track paywall view with source and context
+                    const creditsRemaining = user?.imageGenerationsRemaining || 0;
+                    const transformationsCount = user?.totalTransformations || 0;
+                    Analytics.trackPaywallViewed(
+                      'post_transformation',
+                      creditsRemaining,
+                      transformationsCount
+                    );
+                  }}>
+                  <LinearGradient
+                    colors={['#667eea', '#764ba2']}
+                    style={styles.resultActionGradient}>
+                    <Ionicons name="images" size={24} color="#FFF" />
+                    <Text style={styles.resultActionText}>Buy Credits</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+
+                {/* Pro Subscription Button */}
+                <TouchableOpacity
+                  style={styles.resultActionButton}
+                  onPress={() => {
+                    setShowResultModal(false);
+                    setTimeout(() => setShowSubscriptionPaywall(true), 300);
+
+                    // CRITICAL: Track paywall view with source and context
+                    const creditsRemaining = user?.imageGenerationsRemaining || 0;
+                    const transformationsCount = user?.totalTransformations || 0;
+                    Analytics.trackPaywallViewed(
+                      'post_transformation',
+                      creditsRemaining,
+                      transformationsCount
+                    );
+                  }}>
+                  <LinearGradient
+                    colors={['#FFD700', '#FFA500']}
+                    style={styles.resultActionGradient}>
+                    <Ionicons name="star" size={24} color="#FFF" />
+                    <Text style={styles.resultActionText}>Pro Subscription</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Continue Button */}
+            <TouchableOpacity
+              style={styles.continueButton}
+              onPress={() => setShowResultModal(false)}>
+              <Text style={styles.continueButtonText}>
+                {user?.isPremium ? 'Crear Otra' : 'Continuar'}
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Credits Paywall Modal */}
+      <Modal
+        visible={showCreditsPaywall}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setShowCreditsPaywall(false)}>
+        <RevenueCatPaywall
+          offeringId="default"
+          onClose={() => setShowCreditsPaywall(false)}
+          onPurchaseComplete={() => {
+            setShowCreditsPaywall(false);
+            forceUpdate();
+          }}
+        />
+      </Modal>
+
+      {/* Subscription Paywall Modal */}
+      <Modal
+        visible={showSubscriptionPaywall}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setShowSubscriptionPaywall(false)}>
+        <RevenueCatPaywall
+          offeringId="Artme Subscription"
+          onClose={() => setShowSubscriptionPaywall(false)}
+          onPurchaseComplete={() => {
+            setShowSubscriptionPaywall(false);
+            forceUpdate();
+          }}
+        />
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -482,195 +847,486 @@ export default function TransformScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#f5f7fa',
   },
   scrollContainer: {
-    paddingBottom: 100,
+    paddingBottom: 60,
   },
   header: {
-    padding: 24,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 8,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FFF',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 18,
-    color: 'rgba(255, 255, 255, 0.7)',
-  },
-  imageContainer: {
-    alignItems: 'center',
-    marginHorizontal: 24,
-    marginBottom: 24,
-  },
-  image: {
-    width: IMAGE_SIZE,
-    height: IMAGE_SIZE,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  placeholder: {
-    width: IMAGE_SIZE,
-    height: IMAGE_SIZE,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  settingsButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.9)',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  placeholderText: {
-    color: 'rgba(255, 255, 255, 0.5)',
-    marginTop: 10,
+  creditsButtonContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 8,
   },
-  imageActions: {
-    flexDirection: 'row',
-    position: 'absolute',
-    bottom: 10,
-    right: 10,
-    gap: 10,
-  },
-  actionButton: {
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    padding: 10,
-    borderRadius: 20,
-  },
-  saveButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    padding: 12,
-    borderRadius: 25,
-    minWidth: 80,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  savedButton: {
-    backgroundColor: 'rgba(76, 175, 80, 0.9)',
-  },
-  savedIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  savedText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  artistSelector: {
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFF',
-    marginBottom: 16,
-  },
-  artistGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  artistCard: {
-    width: (CARD_WIDTH - 16) / 2,
-    marginBottom: 16,
-    borderRadius: 12,
+  creditsButton: {
+    borderRadius: 14,
     overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'transparent',
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  selectedArtistCard: {
-    borderColor: '#FFD700',
-  },
-  artistImage: {
-    width: '100%',
-    height: 120,
-  },
-  artistInfo: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 8,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-  },
-  artistName: {
-    color: '#FFF',
-    fontWeight: 'bold',
-  },
-  checkmark: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 12,
-  },
-  ctaContainer: {
-    paddingHorizontal: 24,
-    marginTop: 24,
-  },
-  transformButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  buttonGradient: {
+  creditsButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-  },
-  buttonText: {
-    color: '#000',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  carousel: {
-    marginBottom: 16,
-  },
-  carouselContainer: {
+    paddingVertical: 12,
     paddingHorizontal: 16,
     gap: 12,
   },
-  carouselCard: {
-    width: 120,
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'transparent',
+  creditsButtonTextContainer: {
+    flex: 1,
   },
-  selectedCarouselCard: {
+  creditsButtonNumber: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#FFF',
+    lineHeight: 26,
+  },
+  creditsButtonLabel: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: 2,
+  },
+  premiumBadgeContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+  },
+  premiumBadgeLarge: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  premiumBadgeGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 10,
+  },
+  premiumTextLarge: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FFF',
+  },
+  titleContainer: {
+    paddingHorizontal: 24,
+    paddingVertical: 4,
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  creditsDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  creditsText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#667eea',
+  },
+  premiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+    borderWidth: 1,
     borderColor: '#FFD700',
   },
-  carouselImage: {
-    width: '100%',
-    height: 90,
+  premiumText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFD700',
   },
-  carouselInfo: {
+  mainTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#000',
+    textAlign: 'center',
+  },
+  carouselSection: {
+    marginBottom: 8,
+  },
+  carouselContent: {
+    paddingHorizontal: (width - CARD_WIDTH) / 2,
+    gap: CARD_SPACING,
+  },
+  bigCard: {
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+    borderRadius: 24,
+    overflow: 'hidden',
+    transform: [{ scale: 0.9 }],
+    opacity: 0.6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  centerCard: {
+    transform: [{ scale: 1 }],
+    opacity: 1,
+  },
+  selectedBigCard: {
+    borderWidth: 5,
+    borderColor: '#6c5ce7',
+    shadowColor: '#6c5ce7',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 15,
+    elevation: 15,
+  },
+  cardGradient: {
+    flex: 1,
+    padding: 4,
+  },
+  bigCardImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 20,
+  },
+  cardOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 6,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    padding: 12,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
-  carouselName: {
-    color: '#FFF',
+  cardContent: {
+    gap: 4,
+  },
+  bigCardTitle: {
+    fontSize: 16,
     fontWeight: 'bold',
-    fontSize: 12,
+    color: '#FFF',
     textAlign: 'center',
   },
-  carouselCheckmark: {
+  bigCardSubtitle: {
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+  },
+  selectedOverlay: {
+    backgroundColor: 'rgba(108, 92, 231, 0.7)',
+  },
+  sectionHeader: {
+    paddingHorizontal: 24,
+    paddingVertical: 4,
+    marginBottom: 4,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+    textAlign: 'left',
+  },
+  pageIndicator: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+    gap: 8,
+  },
+  pageIndicatorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(108, 92, 231, 0.3)',
+  },
+  pageIndicatorDotActive: {
+    width: 24,
+    height: 8,
+    backgroundColor: '#6c5ce7',
+  },
+  selectImageHeader: {
+    paddingHorizontal: 24,
+    paddingVertical: 6,
+    marginTop: 8,
+  },
+  selectImageTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+    textAlign: 'center',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 20,
+    paddingHorizontal: 40,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  actionButtonWrapper: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionButtonLarge: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  actionButtonLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  actionButtonGradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  selectedImageContainer: {
+    paddingHorizontal: 40,
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  selectedImageWrapper: {
+    position: 'relative',
+    width: '100%',
+    height: IMAGE_SIZE,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  selectedImagePreview: {
+    width: '100%',
+    height: '100%',
+  },
+  removeImageButton: {
     position: 'absolute',
-    top: 6,
-    right: 6,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    borderRadius: 10,
+    top: 12,
+    right: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 16,
+    padding: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  transformButtonContainer: {
+    paddingHorizontal: 40,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  transformButton: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#00b894',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  transformButtonDisabled: {
+    shadowColor: '#95a5a6',
+    shadowOpacity: 0.2,
+    opacity: 0.7,
+  },
+  transformButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    gap: 10,
+  },
+  transformButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFF',
+    textAlign: 'center',
+  },
+  bottomNav: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+    backgroundColor: '#FFF',
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.1)',
+    paddingBottom: 10,
+  },
+  navItem: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  navItemText: {
+    fontSize: 12,
+    color: '#999',
+    fontWeight: '500',
+  },
+  navItemTextActive: {
+    fontSize: 12,
+    color: '#6c5ce7',
+    fontWeight: 'bold',
+  },
+  resultModalContainer: {
+    flex: 1,
+    backgroundColor: '#f5f7fa',
+  },
+  closeModalButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 100,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  resultModalContent: {
+    flexGrow: 1,
+    paddingTop: 100,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    alignItems: 'center',
+  },
+  resultModalTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  resultImageContainer: {
+    width: width - 40,
+    height: height * 0.4,
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginBottom: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 10,
+    backgroundColor: '#FFF',
+  },
+  resultImage: {
+    width: '100%',
+    height: '100%',
+  },
+  promptTextContainer: {
+    marginBottom: 30,
+    paddingHorizontal: 20,
+  },
+  promptTextTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  promptTextSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  resultActionsContainer: {
+    width: '100%',
+    gap: 16,
+    marginBottom: 20,
+  },
+  resultActionButton: {
+    width: '100%',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  resultActionGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    paddingHorizontal: 32,
+    gap: 12,
+  },
+  resultActionText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFF',
+  },
+  continueButton: {
+    width: '100%',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    backgroundColor: 'rgba(108, 92, 231, 0.1)',
+    borderWidth: 2,
+    borderColor: '#6c5ce7',
+  },
+  continueButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6c5ce7',
+    textAlign: 'center',
   },
 });

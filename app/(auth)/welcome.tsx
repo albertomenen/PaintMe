@@ -12,10 +12,12 @@ import {
   View,
   SafeAreaView,
 } from 'react-native';
+import { useI18n } from '../../hooks/useI18n';
 
 const { width, height } = Dimensions.get('window');
 
 export default function WelcomeScreen() {
+  const { t } = useI18n();
   const handleStartJourney = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push('/(auth)/login');
@@ -45,14 +47,14 @@ export default function WelcomeScreen() {
       <SafeAreaView style={styles.content}>
         {/* Dream text at top */}
         <View style={styles.topSection}>
-          <Text style={styles.dreamText}>Dream</Text>
+          <Text style={styles.dreamText}>{t('welcome.dream', 'Dream')}</Text>
         </View>
 
         {/* Main content */}
         <View style={styles.mainContent}>
-          <Text style={styles.mainTitle}>Turn your</Text>
-          <Text style={styles.mainTitle}>Photos</Text>
-          <Text style={styles.subtitle}>into Art Pieces</Text>
+          <Text style={styles.mainTitle}>{t('welcome.turnYour', 'Turn your')}</Text>
+          <Text style={styles.mainTitle}>{t('welcome.photos', 'Photos')}</Text>
+          <Text style={styles.subtitle}>{t('welcome.intoArt', 'into Art Pieces')}</Text>
         </View>
 
         {/* Bottom section with buttons */}
@@ -68,7 +70,9 @@ export default function WelcomeScreen() {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <Text style={styles.primaryButtonText}>Pruébalo ahora</Text>
+              <Text style={styles.primaryButtonText}>
+                {t('welcome.claimFree', 'Claim your FREE transformation now')}
+              </Text>
             </LinearGradient>
           </TouchableOpacity>
 
@@ -78,7 +82,7 @@ export default function WelcomeScreen() {
             activeOpacity={0.7}
           >
             <Text style={styles.loginText}>
-              ¿Ya tienes una cuenta? <Text style={styles.loginLink}>Inicia sesión</Text>
+              {t('welcome.haveAccount', 'Already have an account?')} <Text style={styles.loginLink}>{t('welcome.signIn', 'Sign In')}</Text>
             </Text>
           </TouchableOpacity>
         </View>

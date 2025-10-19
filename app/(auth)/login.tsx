@@ -21,6 +21,8 @@ import {
 } from 'react-native';
 
 import { supabase } from '../../lib/supabase';
+import LoadingAnimation from '../../components/LoadingAnimation';
+import { useI18n } from '../../hooks/useI18n';
 
 import * as WebBrowser from 'expo-web-browser';
 
@@ -33,7 +35,10 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showLoadingAnimation, setShowLoadingAnimation] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
 
+  const { t } = useI18n();
   const nonceRef = useRef<string | null>(null);
 
   // Debug: Log when login screen renders
@@ -53,6 +58,10 @@ export default function LoginScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     try {
+      // Show animation immediately
+      setLoadingMessage(t('auth.loading.signingIn'));
+      setShowLoadingAnimation(true);
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.toLowerCase().trim(),
         password,
@@ -60,44 +69,51 @@ export default function LoginScreen() {
 
       if (error) {
         console.error('Supabase login error:', error);
+        setShowLoadingAnimation(false);
         Alert.alert('Login Failed', `Error: ${error.message}\n\nDetails: ${JSON.stringify(error, null, 2)}`);
       } else {
         console.log('✅ Login successful:', data);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        
-        // Wait a moment for auth state to update
+
+        // Change message and wait a bit before navigating
+        setLoadingMessage(t('auth.loading.preparingExperience'));
+
         setTimeout(() => {
+          setShowLoadingAnimation(false);
           router.replace('/(tabs)');
-        }, 100);
+        }, 1500);
       }
     } catch (error) {
+      setShowLoadingAnimation(false);
       Alert.alert('Error', 'Something went wrong. Please try again.');
     } finally {
-      setLoading(false);
+      setTimeout(() => {
+        setLoading(false);
+      }, 1500);
     }
   };
 
   const handleAppleLogin = async () => {
     setLoading(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  
+
     try {
       // 1️⃣ Generar nonce aleatorio seguro
-      const rawNonce = Math.random().toString(36).substring(2, 15) + 
-                       Math.random().toString(36).substring(2, 15) + 
+      const rawNonce = Math.random().toString(36).substring(2, 15) +
+                       Math.random().toString(36).substring(2, 15) +
                        Date.now().toString(36);
       nonceRef.current = rawNonce; // Guardar para usar con Supabase
-  
+
       console.log('🔑 Generated nonce:', rawNonce);
-  
+
       // 2️⃣ Hashear el nonce en SHA256 (formato HEX para Apple)
       const hashedNonce = await Crypto.digestStringAsync(
         Crypto.CryptoDigestAlgorithm.SHA256,
         rawNonce // ⚠️ sin encoding extra, por defecto es HEX
       );
-  
+
       console.log('🔐 Hashed nonce (HEX):', hashedNonce);
-  
+
       // 3️⃣ Iniciar sesión con Apple usando el hashedNonce
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
@@ -106,12 +122,16 @@ export default function LoginScreen() {
         ],
         nonce: hashedNonce, // Apple recibe el hash
       });
-  
+
       console.log('🍎 Apple credential:', {
         user: credential.user,
         hasIdentityToken: !!credential.identityToken
       });
-  
+
+      // Show animation after successful Apple authentication
+      setLoadingMessage(t('auth.loading.signingIn'));
+      setShowLoadingAnimation(true);
+
       // 4️⃣ Enviar token de Apple + nonce original a Supabase
       if (credential.identityToken && nonceRef.current) {
         const { data, error } = await supabase.auth.signInWithIdToken({
@@ -119,29 +139,41 @@ export default function LoginScreen() {
           token: credential.identityToken,
           nonce: nonceRef.current, // ⚠️ aquí va el ORIGINAL, no el hash
         });
-  
+
         nonceRef.current = null; // Limpieza
-  
+
         if (error) {
           console.error('❌ Supabase Apple auth error:', error);
+          setShowLoadingAnimation(false);
           Alert.alert('Authentication Failed', error.message);
         } else {
           console.log('✅ Apple Sign-In successful!', data);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          router.replace('/(tabs)');
+
+          // Change message
+          setLoadingMessage(t('auth.loading.preparingExperience'));
+
+          setTimeout(() => {
+            setShowLoadingAnimation(false);
+            router.replace('/(tabs)');
+          }, 1500);
         }
       } else {
+        setShowLoadingAnimation(false);
         Alert.alert('Error', 'No identity token received from Apple.');
       }
     } catch (error: any) {
       console.error('🍎 Apple Sign-In error:', error);
+      setShowLoadingAnimation(false);
       if (error.code === 'ERR_REQUEST_CANCELED') {
         console.log('🍎 User canceled Apple Sign-In');
       } else {
         Alert.alert('Error', 'Could not sign in with Apple. Please try again.');
       }
     } finally {
-      setLoading(false);
+      setTimeout(() => {
+        setLoading(false);
+      }, 1500);
     }
   };
 
@@ -187,14 +219,24 @@ export default function LoginScreen() {
               </LinearGradient>
             </View>
             <Text style={styles.title}>PaintMe</Text>
-            <Text style={styles.subtitle}>Transform any photo into Masterpieces</Text>
+            <Text style={styles.subtitle}>{t('auth.login.headerSubtitle', 'Transform any photo into Masterpieces')}</Text>
+
+            {/* Free Credit Banner - Prominently placed */}
+            <View style={styles.headerPromoBanner}>
+              <View style={styles.headerPromoBannerContent}>
+                <Ionicons name="gift" size={20} color="#FFD700" style={{ marginRight: 8 }} />
+                <Text style={styles.headerPromoTitle}>
+                  {t('auth.login.promoBanner', '🎉 Get 1 FREE transformation - Sign up now!')}
+                </Text>
+              </View>
+            </View>
           </View>
 
           {/* Login Form */}
           <BlurView intensity={20} style={styles.formContainer}>
             <View style={styles.form}>
-              <Text style={styles.formTitle}>Welcome Back</Text>
-              <Text style={styles.formSubtitle}>Sign in to continue your artistic journey</Text>
+              <Text style={styles.formTitle}>{t('auth.login.title', 'Welcome Back')}</Text>
+              <Text style={styles.formSubtitle}>{t('auth.login.subtitle', 'Sign in to continue your artistic journey')}</Text>
 
               {/* Email Input */}
               <View style={styles.inputContainer}>
@@ -202,7 +244,7 @@ export default function LoginScreen() {
                   <Ionicons name="mail-outline" size={20} color="#8E8E93" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
-                    placeholder="Email"
+                    placeholder={t('auth.login.emailPlaceholder', 'Email')}
                     placeholderTextColor="#8E8E93"
                     value={email}
                     onChangeText={setEmail}
@@ -219,7 +261,7 @@ export default function LoginScreen() {
                   <Ionicons name="lock-closed-outline" size={20} color="#8E8E93" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
-                    placeholder="Password"
+                    placeholder={t('auth.login.passwordPlaceholder', 'Password')}
                     placeholderTextColor="#8E8E93"
                     value={password}
                     onChangeText={setPassword}
@@ -230,10 +272,10 @@ export default function LoginScreen() {
                     onPress={() => setShowPassword(!showPassword)}
                     style={styles.passwordToggle}
                   >
-                    <Ionicons 
-                      name={showPassword ? "eye-off-outline" : "eye-outline"} 
-                      size={20} 
-                      color="#8E8E93" 
+                    <Ionicons
+                      name={showPassword ? "eye-off-outline" : "eye-outline"}
+                      size={20}
+                      color="#8E8E93"
                     />
                   </TouchableOpacity>
                 </View>
@@ -255,10 +297,10 @@ export default function LoginScreen() {
                   {loading ? (
                     <View style={styles.loadingContainer}>
                       <View style={styles.spinner} />
-                      <Text style={styles.loginText}>Signing In...</Text>
+                      <Text style={styles.loginText}>{t('auth.login.signingIn', 'Signing In...')}</Text>
                     </View>
                   ) : (
-                    <Text style={styles.loginText}>Sign In</Text>
+                    <Text style={styles.loginText}>{t('auth.login.signIn', 'Sign In')}</Text>
                   )}
                 </LinearGradient>
               </TouchableOpacity>
@@ -266,7 +308,7 @@ export default function LoginScreen() {
               {/* Divider */}
               <View style={styles.divider}>
                 <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>or</Text>
+                <Text style={styles.dividerText}>{t('auth.login.or', 'or')}</Text>
                 <View style={styles.dividerLine} />
               </View>
 
@@ -283,10 +325,10 @@ export default function LoginScreen() {
 
               {/* Sign Up Link */}
               <View style={styles.signupContainer}>
-                <Text style={styles.signupText}>Don&apos;t have an account? </Text>
+                <Text style={styles.signupText}>{t('auth.login.noAccount', "Don't have an account?")} </Text>
                 <Link href="/(auth)/signup" asChild>
                   <TouchableOpacity>
-                    <Text style={styles.signupLink}>Sign Up</Text>
+                    <Text style={styles.signupLink}>{t('auth.login.signUpLink', 'Sign Up')}</Text>
                   </TouchableOpacity>
                 </Link>
               </View>
@@ -294,6 +336,12 @@ export default function LoginScreen() {
           </BlurView>
         </ScrollView>
       </LinearGradient>
+
+      {/* Loading Animation Overlay */}
+      <LoadingAnimation
+        visible={showLoadingAnimation}
+        message={loadingMessage}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -358,6 +406,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
+  },
+  headerPromoBanner: {
+    marginTop: 16,
+    marginHorizontal: 0,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    width: '100%',
+  },
+  headerPromoBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  headerPromoTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    flexShrink: 1,
   },
   formContainer: {
     borderRadius: 24,

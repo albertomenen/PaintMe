@@ -132,6 +132,78 @@ export class RevenueCatService {
       console.error('❌ Error al desloguear de RevenueCat:', error);
     }
   }
+
+  // Verificar si el usuario tiene una suscripción activa
+  static async hasActiveSubscription(entitlementId: string = 'premium'): Promise<boolean> {
+    try {
+      const customerInfo = await this.getCustomerInfo();
+      if (!customerInfo) return false;
+
+      // Verificar si el entitlement está activo
+      const isActive = customerInfo.entitlements.active[entitlementId] !== undefined;
+      console.log('🔍 Subscription status:', {
+        entitlementId,
+        isActive,
+        activeEntitlements: Object.keys(customerInfo.entitlements.active)
+      });
+
+      return isActive;
+    } catch (error) {
+      console.error('❌ Error checking subscription:', error);
+      return false;
+    }
+  }
+
+  // Obtener el tipo de suscripción activa
+  static async getActiveSubscriptionType(entitlementId: string = 'premium'): Promise<string | null> {
+    try {
+      const customerInfo = await this.getCustomerInfo();
+      if (!customerInfo) return null;
+
+      const premiumEntitlement = customerInfo.entitlements.active[entitlementId];
+      if (!premiumEntitlement) return null;
+
+      // Retorna el identificador del producto (ej: "artme_monthly")
+      const productId = premiumEntitlement.productIdentifier;
+      console.log('📦 Active subscription:', productId);
+
+      return productId;
+    } catch (error) {
+      console.error('❌ Error getting subscription type:', error);
+      return null;
+    }
+  }
+
+  // Obtener información detallada de la suscripción
+  static async getSubscriptionInfo(entitlementId: string = 'premium'): Promise<{
+    isActive: boolean;
+    productId: string | null;
+    expirationDate: string | null;
+    willRenew: boolean;
+  }> {
+    try {
+      const customerInfo = await this.getCustomerInfo();
+      if (!customerInfo) {
+        return { isActive: false, productId: null, expirationDate: null, willRenew: false };
+      }
+
+      const entitlement = customerInfo.entitlements.active[entitlementId];
+
+      if (!entitlement) {
+        return { isActive: false, productId: null, expirationDate: null, willRenew: false };
+      }
+
+      return {
+        isActive: true,
+        productId: entitlement.productIdentifier,
+        expirationDate: entitlement.expirationDate || null,
+        willRenew: entitlement.willRenew
+      };
+    } catch (error) {
+      console.error('❌ Error getting subscription info:', error);
+      return { isActive: false, productId: null, expirationDate: null, willRenew: false };
+    }
+  }
 }
 
 // Configuración de paquetes de créditos
@@ -148,7 +220,7 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
     name: '5 Images Pack'
   },
   {
-    identifier: '15_images_artme', 
+    identifier: '15_images_artme',
     credits: 15,
     name: '15 Images Pack'
   },
@@ -156,5 +228,42 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
     identifier: '30_images_artme',
     credits: 30,
     name: '30 Images Pack'
+  }
+];
+
+// Configuración de paquetes de suscripción
+export interface SubscriptionPackage {
+  identifier: string;
+  productId: string;
+  name: string;
+  displayName: string;
+  period: 'weekly' | 'monthly' | 'yearly';
+  features: string[];
+}
+
+export const SUBSCRIPTION_PACKAGES: SubscriptionPackage[] = [
+  {
+    identifier: 'artme_weekly',
+    productId: 'com.yourapp.paintme.subscription.weekly',
+    name: 'Weekly Premium',
+    displayName: 'Weekly',
+    period: 'weekly',
+    features: ['Unlimited transformations', 'All art styles', 'Priority processing']
+  },
+  {
+    identifier: 'artme_monthly',
+    productId: 'com.yourapp.paintme.subscription.monthly',
+    name: 'Monthly Premium',
+    displayName: 'Monthly',
+    period: 'monthly',
+    features: ['Unlimited transformations', 'All art styles', 'Priority processing', 'Best value']
+  },
+  {
+    identifier: 'artme_yearly',
+    productId: 'com.yourapp.paintme.subscription.yearly',
+    name: 'Yearly Premium',
+    displayName: 'Yearly',
+    period: 'yearly',
+    features: ['Unlimited transformations', 'All art styles', 'Priority processing', 'Save 40%']
   }
 ];

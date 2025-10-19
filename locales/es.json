@@ -101,6 +101,15 @@
       "privacy": "Puedes cambiar estos ajustes en cualquier momento desde tu perfil."
     }
   },
+  "welcome": {
+    "dream": "Sueña",
+    "turnYour": "Convierte tus",
+    "photos": "Fotos",
+    "intoArt": "en Obras de Arte",
+    "claimFree": "Reclama tu transformación GRATIS ahora",
+    "haveAccount": "¿Ya tienes una cuenta?",
+    "signIn": "Inicia sesión"
+  },
   "common": {
     "loading": "Cargando...",
     "error": "Error",
@@ -109,5 +118,153 @@
     "ok": "OK",
     "yes": "Sí",
     "no": "No"
+  },
+  "auth": {
+    "loading": {
+      "signingIn": "Iniciando sesión...",
+      "creatingAccount": "Creando tu cuenta...",
+      "preparingExperience": "Preparando tu experiencia artística..."
+    },
+    "promo": {
+      "title": "¡Nuevos usuarios reciben 1 transformación GRATIS!",
+      "subtitle": "Regístrate ahora para reclamar tu regalo",
+      "short": "1 transformación GRATIS - ¡Regístrate ya!"
+    },
+    "login": {
+      "headerSubtitle": "Transforma cualquier foto en Obras Maestras",
+      "promoBanner": "🎉 1 transformación GRATIS - ¡Regístrate ya!",
+      "title": "Bienvenido de Nuevo",
+      "subtitle": "Inicia sesión para continuar tu viaje artístico",
+      "emailPlaceholder": "Correo Electrónico",
+      "passwordPlaceholder": "Contraseña",
+      "signIn": "Iniciar Sesión",
+      "signingIn": "Iniciando Sesión...",
+      "or": "o",
+      "noAccount": "¿No tienes una cuenta?",
+      "signUpLink": "Regístrate"
+    },
+    "signup": {
+      "freeCredit": {
+        "title": "🎉 ¡Regalo de Bienvenida!",
+        "subtitle": "Obtén 1 transformación GRATIS al registrarte",
+        "short": "🎉 ¡Bienvenido! 1 transformación GRATIS"
+      },
+      "headerTitle": "Únete a PaintMe",
+      "headerSubtitle": "Comienza tu transformación artística",
+      "promoBanner": "🎉 ¡Bienvenido! 1 transformación GRATIS",
+      "title": "Crear Cuenta",
+      "subtitle": "Comienza a crear obras maestras hoy",
+      "emailPlaceholder": "Correo Electrónico",
+      "passwordPlaceholder": "Contraseña",
+      "confirmPasswordPlaceholder": "Confirmar Contraseña",
+      "createAccount": "Crear Cuenta",
+      "creatingAccount": "Creando Cuenta...",
+      "termsPrefix": "Al crear una cuenta, aceptas nuestros",
+      "termsOfService": "Términos de Servicio",
+      "and": "y",
+      "privacyPolicy": "Política de Privacidad",
+      "haveAccount": "¿Ya tienes una cuenta?",
+      "signInLink": "Inicia Sesión"
+    }
+  },
+  "profile": {
+    "header": {
+      "memberSince": "Miembro desde"
+    },
+    "credits": {
+      "title": "Tus Obras Maestras",
+      "remaining": "generaciones restantes",
+      "freeTrialUsed": "¡Has usado tu generación gratuita! Compra más para seguir creando obras maestras.",
+      "welcomeFreeTrial": "¡Bienvenido! Tienes una transformación gratis para probar PaintMe."
+    },
+    "purchase": {
+      "sectionTitle": "No dejes que la inspiración espere",
+      "alternativeTitle": "Crea tu próxima obra maestra",
+      "popular": "MÁS POPULAR",
+      "transformations": "Transformaciones",
+      "each": "cada una",
+      "restorePurchases": "Restaurar Compras",
+      "successTitle": "¡Compra Exitosa!",
+      "successMessage": "¡{{credits}} transformaciones añadidas a tu cuenta!",
+      "errorTitle": "Error de Compra",
+      "errorMessage": "No se pudo procesar el pago",
+      "unexpectedError": "Ocurrió un error inesperado. Inténtalo de nuevo."
+    },
+    "account": {
+      "sectionTitle": "Cuenta",
+      "email": "Correo Electrónico",
+      "totalTransformations": "Transformaciones Totales",
+      "completedArtworks": "Obras Completadas",
+      "favoriteArtist": "Artista Favorito",
+      "notSelected": "No seleccionado"
+    },
+    "settings": {
+      "sectionTitle": "Configuración",
+      "notifications": "Notificaciones",
+      "language": "Language / Idioma",
+      "helpSupport": "Ayuda y Soporte",
+      "termsPrivacy": "Términos y Privacidad"
+    },
+    "signOut": {
+      "button": "Cerrar Sesión",
+      "confirmTitle": "Cerrar Sesión",
+      "confirmMessage": "¿Estás seguro de que quieres cerrar sesión?",
+      "cancel": "Cancelar",
+      "confirm": "Cerrar Sesión",
+      "errorMessage": "Error al cerrar sesión."
+    },
+    "deleteAccount": {
+      "button": "Eliminar Cuenta",
+      "confirmTitle": "Eliminar Cuenta",
+      "confirmMessage": "¿Estás seguro de que quieres eliminar permanentemente tu cuenta? Esta acción no se puede deshacer y eliminará todos tus datos, transformaciones y compras.",
+      "finalConfirmTitle": "Confirmación Final",
+      "finalConfirmMessage": "Esto eliminará permanentemente tu cuenta y todos los datos asociados. Escribe DELETE para confirmar.",
+      "cancel": "Cancelar",
+      "confirm": "ELIMINAR CUENTA",
+      "successTitle": "Cuenta Eliminada",
+      "successMessage": "Tu cuenta ha sido eliminada permanentemente.",
+      "errorMessage": "Error al eliminar la cuenta. Por favor contacta a soporte en alberto@notjustvpn.com",
+      "unexpectedError": "Ocurrió un error inesperado. Por favor contacta a soporte."
+    },
+    "restore": {
+      "successTitle": "Compras Restauradas",
+      "successMessage": "Tus compras anteriores han sido restauradas exitosamente.",
+      "noPurchasesTitle": "Sin Compras",
+      "noPurchasesMessage": "No se encontraron compras anteriores para restaurar.",
+      "errorMessage": "No se pudieron restaurar las compras."
+    },
+    "support": {
+      "emailSubject": "Soporte de la App PaintMe",
+      "emailBody": "Hola Alberto,\\n\\nNecesito ayuda con la app PaintMe.\\n\\n",
+      "noEmailApp": "No hay aplicación de correo disponible. Por favor escríbenos a: alberto@notjustvpn.com",
+      "emailError": "No se pudo abrir la aplicación de correo. Por favor contacta a: alberto@notjustvpn.com"
+    },
+    "terms": {
+      "noBrowser": "No se pudo abrir el navegador. Por favor visita: https://menendez.dev/terms",
+      "linkError": "No se pudo abrir el enlace. Por favor visita: https://menendez.dev/terms"
+    },
+    "subscription": {
+      "title": "Suscripción Premium",
+      "activeBadge": "ACTIVA",
+      "activeTitle": "¡Eres Premium!",
+      "activeDescription": "Disfruta de transformaciones ilimitadas",
+      "renewsOn": "Se renueva el",
+      "expiresOn": "Expira el",
+      "manage": "Gestionar Suscripción",
+      "cancel": "Cancelar Suscripción",
+      "weekly": "Semanal",
+      "monthly": "Mensual",
+      "yearly": "Anual",
+      "unlimitedTransformations": "Transformaciones Ilimitadas",
+      "allStyles": "Todos los Estilos",
+      "priorityProcessing": "Procesamiento Prioritario",
+      "bestValue": "Mejor Valor",
+      "save": "Ahorra {{percent}}%",
+      "perWeek": "/semana",
+      "perMonth": "/mes",
+      "perYear": "/año",
+      "subscribeButton": "Suscribirse Ahora",
+      "orBuyCredits": "O compra paquetes de transformaciones"
+    }
   }
 }

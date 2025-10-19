@@ -7,6 +7,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Modal,
 } from 'react-native';
 import Animated, {
   FadeInRight,
@@ -19,6 +20,7 @@ import { useI18n } from '../hooks/useI18n';
 import LottieIcon from './LottieIcon';
 import { LOTTIE_ANIMATIONS } from '../constants/Animations';
 import { Analytics } from '../lib/analytics';
+import RevenueCatPaywall from './RevenueCatPaywall';
 
 interface OnboardingStep {
   titleKey: string;
@@ -54,8 +56,11 @@ interface OnboardingProps {
 
 export default function Onboarding({ onComplete }: OnboardingProps) {
   const [currentStep, setCurrentStep] = useState(0);
+  const [showPaywall, setShowPaywall] = useState(false);
   const progressValue = useSharedValue(0);
   const { t } = useI18n();
+
+  const offeringId = 'Artme Subscription'; // RevenueCat paywall identifier for subscription
 
   // Track onboarding started
   useEffect(() => {
@@ -74,12 +79,24 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       progressValue.value = withSpring((currentStep + 2) / ONBOARDING_STEPS.length);
     } else {
       Analytics.trackOnboardingCompleted();
-      onComplete();
+      // Show RevenueCat paywall instead of completing immediately
+      setShowPaywall(true);
     }
   };
 
   const skipOnboarding = () => {
     Analytics.trackOnboardingSkipped(currentStep + 1);
+    // Show paywall even when skipping
+    setShowPaywall(true);
+  };
+
+  const handlePaywallClose = () => {
+    setShowPaywall(false);
+    onComplete();
+  };
+
+  const handlePurchaseComplete = () => {
+    Analytics.trackPurchaseFromOnboarding();
     onComplete();
   };
 
@@ -144,15 +161,28 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             <Text style={styles.nextButtonText}>
               {currentStep === ONBOARDING_STEPS.length - 1 ? t('onboarding.start') : t('onboarding.next')}
             </Text>
-            <Ionicons 
-              name={currentStep === ONBOARDING_STEPS.length - 1 ? 'rocket-outline' : 'chevron-forward'} 
-              size={20} 
-              color="#000" 
+            <Ionicons
+              name={currentStep === ONBOARDING_STEPS.length - 1 ? 'rocket-outline' : 'chevron-forward'}
+              size={20}
+              color="#000"
               style={styles.buttonIcon}
             />
           </LinearGradient>
         </TouchableOpacity>
       </View>
+
+      {/* RevenueCat Paywall Modal */}
+      <Modal
+        visible={showPaywall}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={handlePaywallClose}>
+        <RevenueCatPaywall
+          offeringId={offeringId}
+          onClose={handlePaywallClose}
+          onPurchaseComplete={handlePurchaseComplete}
+        />
+      </Modal>
     </SafeAreaView>
   );
 }

@@ -19,6 +19,8 @@ import {
 } from 'react-native';
 
 import { supabase } from '../../lib/supabase';
+import LoadingAnimation from '../../components/LoadingAnimation';
+import { useI18n } from '../../hooks/useI18n';
 
 const { width, height } = Dimensions.get('window');
 
@@ -29,6 +31,10 @@ export default function SignupScreen() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showLoadingAnimation, setShowLoadingAnimation] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
+
+  const { t } = useI18n();
 
   const handleSignup = async () => {
     if (!email || !password || !confirmPassword) {
@@ -50,47 +56,61 @@ export default function SignupScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     try {
+      // Show animation immediately
+      setLoadingMessage(t('auth.loading.creatingAccount'));
+      setShowLoadingAnimation(true);
+
       // Simple signup without extra options first
       const userEmail = email.toLowerCase().trim();
       const userPassword = password;
-      
+
       const signupData = {
         email: userEmail,
         password: userPassword,
       };
-      
+
       console.log('🔐 Attempting signup with:', {
         email: signupData.email,
         passwordLength: password.length,
         hasOptions: !!signupData.options,
         emailPattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupData.email)
       });
-      
+
       const { data, error } = await supabase.auth.signUp(signupData);
 
       if (error) {
         console.error('Supabase signup error:', error);
+        setShowLoadingAnimation(false);
         Alert.alert('Signup Failed', `Error: ${error.message}\n\nDetails: ${JSON.stringify(error, null, 2)}`);
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        
+
         console.log('✅ Signup successful:', data);
-        
+
+        // Change message
+        setLoadingMessage(t('auth.loading.preparingExperience'));
+
         // If email confirmation is disabled, user should be automatically logged in
         if (data.session) {
           // User is logged in automatically
-          Alert.alert(
-            'Welcome!', 
-            'Account created successfully!',
-            [
-              {
-                text: 'Continue',
-                onPress: () => router.replace('/(tabs)')
-              }
-            ]
-          );
+          setTimeout(() => {
+            setShowLoadingAnimation(false);
+            Alert.alert(
+              'Welcome!',
+              'Account created successfully!',
+              [
+                {
+                  text: 'Continue',
+                  onPress: () => router.replace('/(tabs)')
+                }
+              ]
+            );
+          }, 1500);
         } else {
           // Need to login manually or confirm email
+          setTimeout(() => {
+            setShowLoadingAnimation(false);
+          }, 1500);
           try {
             // Attempt automatic login
             const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
@@ -137,9 +157,12 @@ export default function SignupScreen() {
         }
       }
     } catch (error) {
+      setShowLoadingAnimation(false);
       Alert.alert('Error', 'Something went wrong. Please try again.');
     } finally {
-      setLoading(false);
+      setTimeout(() => {
+        setLoading(false);
+      }, 1500);
     }
   };
 
@@ -181,15 +204,25 @@ export default function SignupScreen() {
                 />
             
             </View>
-            <Text style={styles.title}>Join PaintMe</Text>
-            <Text style={styles.subtitle}>Begin your artistic transformation</Text>
+            <Text style={styles.title}>{t('auth.signup.headerTitle', 'Join PaintMe')}</Text>
+            <Text style={styles.subtitle}>{t('auth.signup.headerSubtitle', 'Begin your artistic transformation')}</Text>
+
+            {/* Free Credit Banner - Prominently placed */}
+            <View style={styles.headerPromoBanner}>
+              <View style={styles.headerPromoBannerContent}>
+                <Ionicons name="gift" size={20} color="#FFD700" style={{ marginRight: 8 }} />
+                <Text style={styles.headerPromoTitle}>
+                  {t('auth.signup.promoBanner', '🎉 Welcome! Get 1 FREE transformation')}
+                </Text>
+              </View>
+            </View>
           </View>
 
           {/* Signup Form */}
           <BlurView intensity={20} style={styles.formContainer}>
             <View style={styles.form}>
-              <Text style={styles.formTitle}>Create Account</Text>
-              <Text style={styles.formSubtitle}>Start creating masterpieces today</Text>
+              <Text style={styles.formTitle}>{t('auth.signup.title', 'Create Account')}</Text>
+              <Text style={styles.formSubtitle}>{t('auth.signup.subtitle', 'Start creating masterpieces today')}</Text>
 
               {/* Email Input */}
               <View style={styles.inputContainer}>
@@ -197,7 +230,7 @@ export default function SignupScreen() {
                   <Ionicons name="mail-outline" size={20} color="#8E8E93" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
-                    placeholder="Email"
+                    placeholder={t('auth.signup.emailPlaceholder', 'Email')}
                     placeholderTextColor="#8E8E93"
                     value={email}
                     onChangeText={setEmail}
@@ -214,7 +247,7 @@ export default function SignupScreen() {
                   <Ionicons name="lock-closed-outline" size={20} color="#8E8E93" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
-                    placeholder="Password"
+                    placeholder={t('auth.signup.passwordPlaceholder', 'Password')}
                     placeholderTextColor="#8E8E93"
                     value={password}
                     onChangeText={setPassword}
@@ -225,10 +258,10 @@ export default function SignupScreen() {
                     onPress={() => setShowPassword(!showPassword)}
                     style={styles.passwordToggle}
                   >
-                    <Ionicons 
-                      name={showPassword ? "eye-off-outline" : "eye-outline"} 
-                      size={20} 
-                      color="#8E8E93" 
+                    <Ionicons
+                      name={showPassword ? "eye-off-outline" : "eye-outline"}
+                      size={20}
+                      color="#8E8E93"
                     />
                   </TouchableOpacity>
                 </View>
@@ -240,7 +273,7 @@ export default function SignupScreen() {
                   <Ionicons name="lock-closed-outline" size={20} color="#8E8E93" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
-                    placeholder="Confirm Password"
+                    placeholder={t('auth.signup.confirmPasswordPlaceholder', 'Confirm Password')}
                     placeholderTextColor="#8E8E93"
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
@@ -251,19 +284,13 @@ export default function SignupScreen() {
                     onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                     style={styles.passwordToggle}
                   >
-                    <Ionicons 
-                      name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} 
-                      size={20} 
-                      color="#8E8E93" 
+                    <Ionicons
+                      name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+                      size={20}
+                      color="#8E8E93"
                     />
                   </TouchableOpacity>
                 </View>
-              </View>
-
-              {/* Free Credit Notice */}
-              <View style={styles.creditNotice}>
-                <Ionicons name="gift" size={20} color="#FFD700" />
-                <Text style={styles.creditText}>Get 1 free transformation upon signup!</Text>
               </View>
 
               {/* Signup Button */}
@@ -282,27 +309,27 @@ export default function SignupScreen() {
                   {loading ? (
                     <View style={styles.loadingContainer}>
                       <View style={styles.spinner} />
-                      <Text style={styles.signupText}>Creating Account...</Text>
+                      <Text style={styles.signupText}>{t('auth.signup.creatingAccount', 'Creating Account...')}</Text>
                     </View>
                   ) : (
-                    <Text style={styles.signupText}>Create Account</Text>
+                    <Text style={styles.signupText}>{t('auth.signup.createAccount', 'Create Account')}</Text>
                   )}
                 </LinearGradient>
               </TouchableOpacity>
 
               {/* Terms */}
               <Text style={styles.termsText}>
-                By creating an account, you agree to our{' '}
-                <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
-                <Text style={styles.termsLink}>Privacy Policy</Text>
+                {t('auth.signup.termsPrefix', 'By creating an account, you agree to our')}{' '}
+                <Text style={styles.termsLink}>{t('auth.signup.termsOfService', 'Terms of Service')}</Text> {t('auth.signup.and', 'and')}{' '}
+                <Text style={styles.termsLink}>{t('auth.signup.privacyPolicy', 'Privacy Policy')}</Text>
               </Text>
 
               {/* Login Link */}
               <View style={styles.loginContainer}>
-                <Text style={styles.loginText}>Already have an account? </Text>
+                <Text style={styles.loginText}>{t('auth.signup.haveAccount', 'Already have an account?')} </Text>
                 <Link href="/(auth)/login" asChild>
                   <TouchableOpacity>
-                    <Text style={styles.loginLink}>Sign In</Text>
+                    <Text style={styles.loginLink}>{t('auth.signup.signInLink', 'Sign In')}</Text>
                   </TouchableOpacity>
                 </Link>
               </View>
@@ -310,6 +337,12 @@ export default function SignupScreen() {
           </BlurView>
         </ScrollView>
       </LinearGradient>
+
+      {/* Loading Animation Overlay */}
+      <LoadingAnimation
+        visible={showLoadingAnimation}
+        message={loadingMessage}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -375,6 +408,28 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
   },
+  headerPromoBanner: {
+    marginTop: 16,
+    marginHorizontal: 0,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    width: '100%',
+  },
+  headerPromoBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  headerPromoTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    flexShrink: 1,
+  },
   formContainer: {
     borderRadius: 24,
     overflow: 'hidden',
@@ -418,20 +473,6 @@ const styles = StyleSheet.create({
   },
   passwordToggle: {
     padding: 4,
-  },
-  creditNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 215, 0, 0.2)',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 24,
-  },
-  creditText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#FFD700',
-    fontWeight: '500',
   },
   signupButton: {
     marginBottom: 16,
