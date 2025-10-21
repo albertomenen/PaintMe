@@ -23,6 +23,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import LoadingAnimation from '../../components/LoadingAnimation';
 import { useI18n } from '../../hooks/useI18n';
+import MetaAnalytics from '../../services/metaAnalytics';
 
 import * as WebBrowser from 'expo-web-browser';
 
@@ -74,6 +75,12 @@ export default function LoginScreen() {
       } else {
         console.log('✅ Login successful:', data);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+        // Track login event for Meta Ads
+        MetaAnalytics.trackLogin({
+          method: 'email',
+          userId: data.user?.id,
+        });
 
         // Change message and wait a bit before navigating
         setLoadingMessage(t('auth.loading.preparingExperience'));
@@ -149,6 +156,12 @@ export default function LoginScreen() {
         } else {
           console.log('✅ Apple Sign-In successful!', data);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+          // Track login event for Meta Ads
+          MetaAnalytics.trackLogin({
+            method: 'apple',
+            userId: data.user?.id,
+          });
 
           // Change message
           setLoadingMessage(t('auth.loading.preparingExperience'));

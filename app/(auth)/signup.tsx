@@ -21,6 +21,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import LoadingAnimation from '../../components/LoadingAnimation';
 import { useI18n } from '../../hooks/useI18n';
+import MetaAnalytics from '../../services/metaAnalytics';
 
 const { width, height } = Dimensions.get('window');
 
@@ -86,6 +87,12 @@ export default function SignupScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
         console.log('✅ Signup successful:', data);
+
+        // Track signup event for Meta Ads
+        MetaAnalytics.trackSignUp({
+          method: 'email',
+          userId: data.user?.id,
+        });
 
         // Change message
         setLoadingMessage(t('auth.loading.preparingExperience'));

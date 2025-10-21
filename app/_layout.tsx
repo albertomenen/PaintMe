@@ -11,6 +11,7 @@ import { useOnboarding } from '../hooks/useOnboarding';
 import { supabase } from '../lib/supabase';
 import { NotificationService } from '../lib/notifications';
 import { Analytics } from '../lib/analytics';
+import MetaAnalytics from '../services/metaAnalytics';
 import Onboarding from '../components/Onboarding';
 import { CREDIT_PACKAGES } from '../lib/revenuecat';
 import { useUser } from '../hooks/useUser';
@@ -259,6 +260,8 @@ function AppContent() {
     initializeRevenueCat();
     initializeNotifications();
     initializeAnalytics();
+    MetaAnalytics.initialize();
+    MetaAnalytics.trackAppInstall(); // Track app activation
   }, []);
 
   // Handle notification responses
