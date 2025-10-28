@@ -9,6 +9,7 @@ import {
     StyleSheet,
     TouchableOpacity,
     View,
+    Modal,
 } from 'react-native';
 
 import { ThemedText } from '../../components/ThemedText';
@@ -17,6 +18,7 @@ import { ARTIST_STYLES, ANIME_STYLES } from '../../constants/Config';
 import { useUser } from '../../hooks/useUser';
 import { ImageUtils } from '../../lib/imageUtils';
 import { Analytics } from '../../lib/analytics';
+import RevenueCatPaywall from '../../components/RevenueCatPaywall';
 
 const { width } = Dimensions.get('window');
 const imageSize = (width - 60) / 2;
@@ -24,23 +26,26 @@ const imageSize = (width - 60) / 2;
 
 
 export default function GalleryScreen() {
-  const { user, transformations, loading } = useUser();
+  const { user, transformations, loading, refreshUser } = useUser();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<'all' | keyof typeof ARTIST_STYLES | keyof typeof ANIME_STYLES>('all');
   const [selectedCategory, setSelectedCategory] = useState<'artists' | 'anime'>('artists');
+  const [showSubscriptionPaywall, setShowSubscriptionPaywall] = useState(false);
+  const [, forceUpdate] = React.useReducer(x => x + 1, 0);
 
-  // Track gallery view
+  // Track gallery view and refresh data when screen is focused
   React.useEffect(() => {
     Analytics.trackGalleryViewed();
+    // Refresh user data to show latest transformations
+    refreshUser();
   }, []);
 
-  const onRefresh = React.useCallback(() => {
+  const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    // In a real app, fetch fresh data from Supabase
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
-  }, []);
+    // Refresh user data from Supabase to get latest transformations
+    await refreshUser();
+    setRefreshing(false);
+  }, [refreshUser]);
 
   const handleSaveImage = async (imageUrl: string) => {
     await ImageUtils.saveToGallery(imageUrl);
@@ -235,6 +240,39 @@ export default function GalleryScreen() {
           </View>
         )}
       </ThemedView>
+
+      {/* Floating Upgrade to Pro Button - Only show for non-premium users */}
+      {user && !user.isPremium && (
+        <TouchableOpacity
+          style={styles.floatingProButton}
+          onPress={() => setShowSubscriptionPaywall(true)}
+          activeOpacity={0.9}>
+          <LinearGradient
+            colors={['#FFD700', '#FFA500']}
+            style={styles.floatingProGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}>
+            <Ionicons name="star" size={20} color="#FFF" />
+            <ThemedText style={styles.floatingProText}>Upgrade to Pro</ThemedText>
+          </LinearGradient>
+        </TouchableOpacity>
+      )}
+
+      {/* Subscription Paywall Modal */}
+      <Modal
+        visible={showSubscriptionPaywall}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setShowSubscriptionPaywall(false)}>
+        <RevenueCatPaywall
+          offeringId="Artme Subscription"
+          onClose={() => setShowSubscriptionPaywall(false)}
+          onPurchaseComplete={() => {
+            setShowSubscriptionPaywall(false);
+            forceUpdate();
+          }}
+        />
+      </Modal>
     </ScrollView>
   );
 }
@@ -488,5 +526,30 @@ const styles = StyleSheet.create({
   },
   stylePeriodActive: {
     color: 'rgba(255,255,255,0.9)',
+  },
+  floatingProButton: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    borderRadius: 30,
+    overflow: 'hidden',
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 999,
+  },
+  floatingProGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  floatingProText: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#FFF',
   },
 }); 

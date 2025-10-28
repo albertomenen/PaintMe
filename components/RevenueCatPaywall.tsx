@@ -16,7 +16,7 @@ export default function RevenueCatPaywall({
   onClose,
   onPurchaseComplete
 }: RevenueCatPaywallProps) {
-  const { addImageGenerations } = useUser();
+  const { addImageGenerations, refreshUser } = useUser();
 
   useEffect(() => {
     presentNativePaywall();
@@ -96,6 +96,10 @@ export default function RevenueCatPaywall({
             console.log(`✅ Added ${credits} credits`);
           }
         }
+
+        // Refresh user data from database to ensure all screens show updated credits
+        console.log('🔄 Refreshing user data after purchase...');
+        refreshUser();
 
         if (onPurchaseComplete) {
           onPurchaseComplete();

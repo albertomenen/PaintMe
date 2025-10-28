@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { Image } from 'expo-image';
+import { Video, ResizeMode } from 'expo-av';
 import React from 'react';
 import {
   Dimensions,
@@ -30,13 +30,16 @@ export default function WelcomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Background Image */}
-      <Image
-        source={require('../../assets/images/image-welcome.png')}
-        style={styles.backgroundImage}
-        contentFit="cover"
+      {/* Background Video */}
+      <Video
+        source={require('../../assets/video/promo artme 2.mov')}
+        style={styles.backgroundVideo}
+        resizeMode={ResizeMode.COVER}
+        shouldPlay
+        isLooping
+        isMuted
       />
-      
+
       {/* Overlay gradient */}
       <LinearGradient
         colors={['rgba(0,0,0,0.2)', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.7)']}
@@ -96,7 +99,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
-  backgroundImage: {
+  backgroundVideo: {
     position: 'absolute',
     width: '100%',
     height: '100%',

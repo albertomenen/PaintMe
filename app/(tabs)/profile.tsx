@@ -26,7 +26,7 @@ import { useI18n } from '../../hooks/useI18n';
 import RevenueCatPaywall from '../../components/RevenueCatPaywall';
 
 export default function ProfileScreen() {
-  const { user, addImageGenerations, transformations, updateTrigger } = useUser();
+  const { user, addImageGenerations, transformations, updateTrigger, refreshUser } = useUser();
   const { t } = useI18n();
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
@@ -138,9 +138,13 @@ useEffect(() => {
         const newTotal = (user?.imageGenerationsRemaining || 0) + credits;
         await AsyncStorage.setItem('user_credits', newTotal.toString());
         console.log('💾 Stored credits in AsyncStorage:', newTotal);
-        
+
         // Actualizar customer info local
         setCustomerInfo(result.customerInfo);
+
+        // Refresh user data from database to ensure UI is in sync
+        console.log('🔄 Refreshing user data from database...');
+        await refreshUser();
 
         Alert.alert(
           `🎉 ${t('profile.purchase.successTitle')}`,

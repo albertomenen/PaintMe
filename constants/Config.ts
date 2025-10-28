@@ -35,7 +35,7 @@ export const ARTIST_STYLES = {
     description: 'Spanish master of royal portraiture and sophisticated realism',
     characteristics: 'Sophisticated technique, subtle lighting, masterful realism',
     prompt: 'Transform this photograph into a masterpiece by Diego Velázquez, employing a sophisticated realism and a loose, precise brushstroke that masterfully defines forms. Apply a natural and diffused light to create a subtle atmosphere and a sense of depth through aerial perspective. Use a sober and elegant color palette, dominated by earth tones, blacks, whites, and silvery grays, giving the scene the dignity and naturalism characteristic of the Spanish Golden Age.',
-    sampleImage: require('../assets/images/Velazquez.png'),
+    sampleImage: require('../assets/images/velazquez2.png'),
     primaryColor: '#2F4F4F',
     secondaryColor: '#B8860B',
     gradientColors: ['#2F4F4F', '#708090', '#B8860B']
@@ -59,7 +59,7 @@ export const ARTIST_STYLES = {
     description: 'Dutch post-impressionist known for vibrant colors and expressive brushstrokes',
     characteristics: 'Swirling brushstrokes, vibrant colors, emotional intensity',
     prompt: 'Interpret this photo in the post-impressionist style of Vincent van Gogh. Use swirling, short, and visible brushstrokes, applying the paint with a thick impasto technique to create a palpable texture. Employ a vibrant and bold color palette, such as intense yellows, deep blues, and emerald greens, to express a strong emotional charge. Give the scene a dynamic movement and a vibrant energy that captures the essence of his unique aesthetic.',
-    sampleImage: require('../assets/images/Vangohg2.png'), 
+    sampleImage: require('../assets/images/vangogh.png'), 
     primaryColor: '#4169E1',
     secondaryColor: '#FFD700',
     gradientColors: ['#4169E1', '#1E90FF', '#FFD700']
@@ -71,7 +71,7 @@ export const ARTIST_STYLES = {
     description: 'French impressionist master of light, color, and atmospheric effects',
     characteristics: 'Impressionist technique, light effects, soft brushwork',
     prompt: 'Transform this photo into an impressionist painting by Claude Monet. Focus on capturing the fleeting effects of natural light with short, loose, and visible brushstrokes. Use a luminous and vibrant color palette, applying pure colors side-by-side to simulate the reflection of light. Soften the contours and create an ethereal atmosphere, as if the scene were viewed outdoors (\'en plein air\'), paying special attention to reflections in the water if any are present.',
-    sampleImage: require('../assets/images/monet2.png'),
+    sampleImage: require('../assets/images/monet3.png'),
     primaryColor: '#87CEEB',
     secondaryColor: '#98FB98',
     gradientColors: ['#87CEEB', '#B0E0E6', '#98FB98']
@@ -87,6 +87,18 @@ export const ARTIST_STYLES = {
     primaryColor: '#FFE4B5',
     secondaryColor: '#87CEFA',
     gradientColors: ['#FFE4B5', '#F0E68C', '#87CEFA']
+  },
+  expressiverealismo: {
+    name: 'Expresivo',
+    fullName: 'Realismo Expresivo',
+    period: 'Contemporary',
+    description: 'Dramatic expressive oil painting with raw physical texture and bold brushwork',
+    characteristics: 'Thick impasto, dramatic chiaroscuro, textured paint, visceral finish',
+    prompt: '(Expressive oil painting:1.5), a dramatic close-up portrait, style of Phil Hale and Ashley Wood. The primary focus is on the raw, physical texture of the paint. The background is a chaotic, heavily textured, abstract field of (vibrant crimson red:1.3). It is not a flat color, but a maelstrom of scraped paint, palette knife marks, gestural strokes, and sgraffito details, revealing layers underneath. The subject, whose likeness is based on the input image, is rendered with raw, confident brushwork. (Strong chiaroscuro lighting:1.2) from the side carves out the features, creating deep, dark shadows and bright, almost-white highlights. Highlights on the skin are built up with (thick, sculptural impasto:1.4), giving them a physical dimension. The overall finish is painterly and visceral, deliberately unpolished, celebrating the texture of the paint itself.',
+    sampleImage: require('../assets/images/expresivo.png'), // Necesitarás añadir imagen específica
+    primaryColor: '#DC143C',
+    secondaryColor: '#8B0000',
+    gradientColors: ['#DC143C', '#B22222', '#8B0000']
   }
 } as const;
 

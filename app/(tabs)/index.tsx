@@ -56,7 +56,7 @@ export default function TransformScreen() {
   const artistScrollViewRef = useRef<ScrollView>(null);
   const animeScrollViewRef = useRef<ScrollView>(null);
 
-  const { user, canTransform, addTransformation, updateTransformation, decrementImageGenerations, loading, updateTrigger } = useUser();
+  const { user, canTransform, addTransformation, updateTransformation, decrementImageGenerations, loading, updateTrigger, refreshUser } = useUser();
   const { settings: notificationSettings } = useNotificationSettings();
   const [transformStartTime, setTransformStartTime] = useState<number | null>(null);
   const [imageAutoSaved, setImageAutoSaved] = useState(false);
@@ -285,6 +285,10 @@ export default function TransformScreen() {
 
         await decrementImageGenerations();
         console.log('🏠 INDEX: Credits decremented after transformation');
+
+        // Refresh user data to update gallery and credits display
+        console.log('🔄 Refreshing user data to sync gallery...');
+        refreshUser();
 
         forceUpdate();
 
@@ -840,6 +844,23 @@ export default function TransformScreen() {
           }}
         />
       </Modal>
+
+      {/* Floating Upgrade to Pro Button - Only show for non-premium users */}
+      {user && !user.isPremium && (
+        <TouchableOpacity
+          style={styles.floatingProButton}
+          onPress={() => setShowSubscriptionPaywall(true)}
+          activeOpacity={0.9}>
+          <LinearGradient
+            colors={['#FFD700', '#FFA500']}
+            style={styles.floatingProGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}>
+            <Ionicons name="star" size={20} color="#FFF" />
+            <Text style={styles.floatingProText}>Upgrade to Pro</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 }
@@ -1328,5 +1349,30 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#6c5ce7',
     textAlign: 'center',
+  },
+  floatingProButton: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    borderRadius: 30,
+    overflow: 'hidden',
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 999,
+  },
+  floatingProGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  floatingProText: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#FFF',
   },
 });
