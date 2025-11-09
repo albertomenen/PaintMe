@@ -7,27 +7,32 @@ import {
   Alert,
   ActivityIndicator,
   SafeAreaView,
+  Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Purchases from 'react-native-purchases';
+import LottieView from 'lottie-react-native';
 import { useI18n } from '../hooks/useI18n';
 import { Analytics } from '../lib/analytics';
+import { useUser } from '../hooks/useUser';
 
 interface SpecialOfferPaywallProps {
   onClose: () => void;
   fromNotification?: boolean;
 }
 
-export default function SpecialOfferPaywallScreen({ 
+export default function SpecialOfferPaywallScreen({
   onClose,
   fromNotification = false
 }: SpecialOfferPaywallProps) {
   const [loading, setLoading] = useState(false);
+  const [processingPurchase, setProcessingPurchase] = useState(false);
   const [packages, setPackages] = useState<any[]>([]);
   const [selectedPackage, setSelectedPackage] = useState<any>(null);
   const [timeLeft, setTimeLeft] = useState(3600); // 1 hour countdown
   const { t } = useI18n();
+  const { updatePremiumStatus, refreshUser } = useUser();
 
   useEffect(() => {
     fetchSpecialOffering();
@@ -84,33 +89,72 @@ export default function SpecialOfferPaywallScreen({
 
     try {
       setLoading(true);
+      setProcessingPurchase(true);
 
       console.log('🎁 Starting special offer purchase:', selectedPackage.product.identifier);
-      
+
       const { customerInfo } = await Purchases.purchasePackage(selectedPackage);
-      
-      if (customerInfo.entitlements.active['premium'] !== undefined) {
-        console.log('✅ Special offer purchase successful!');
-        
+
+      // Check for any premium entitlement (support multiple names)
+      const premiumEntitlementKey = Object.keys(customerInfo.entitlements.active).find(
+        key => ['premium', 'Weekly subscription', 'Monthly Access'].includes(key)
+      );
+
+      if (premiumEntitlementKey) {
+        console.log('✅ Special offer purchase successful! Entitlement:', premiumEntitlementKey);
+
+        // Get subscription details
+        const premiumEntitlement = customerInfo.entitlements.active[premiumEntitlementKey];
+        const subscriptionType = premiumEntitlement.productIdentifier;
+
+        console.log('🎯 Updating premium status in database...');
+
+        // Update premium status in database
+        await updatePremiumStatus(true, subscriptionType);
+
+        console.log('🔄 Refreshing user data...');
+
+        // Refresh user data to get latest state
+        await refreshUser();
+
+        // Force a re-render by updating the update trigger
+        if ((global as any).forceUserUpdate) {
+          (global as any).forceUserUpdate();
+        }
+
+        console.log('✅ Premium status updated successfully!');
+
         Analytics.trackEvent('purchase_completed', {
           product_id: selectedPackage.product.identifier,
           offering_id: 'ofrng15feade036',
           paywall_type: 'special_offer',
-          from_notification: fromNotification
+          from_notification: fromNotification,
+          subscription_type: subscriptionType
         });
 
-        Alert.alert(
-          t('paywall.specialOffer.successTitle'),
-          t('paywall.specialOffer.successMessage'),
-          [{ text: 'Awesome!', onPress: onClose }]
-        );
+        // Wait a bit to ensure the animation shows
+        setTimeout(() => {
+          setProcessingPurchase(false);
+          Alert.alert(
+            t('paywall.specialOffer.successTitle'),
+            t('paywall.specialOffer.successMessage'),
+            [{
+              text: 'Awesome!',
+              onPress: () => {
+                console.log('👑 User is now premium! Closing paywall...');
+                onClose();
+              }
+            }]
+          );
+        }, 1500);
       }
     } catch (error: any) {
       console.error('❌ Special offer purchase failed:', error);
-      
+      setProcessingPurchase(false);
+
       if (error.userCancelled) {
         console.log('🚫 User cancelled special offer purchase');
-        
+
         Analytics.trackEvent('purchase_cancelled', {
           product_id: selectedPackage.product.identifier,
           offering_id: 'ofrng15feade036',
@@ -156,7 +200,27 @@ export default function SpecialOfferPaywallScreen({
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient colors={['#1a1a1a', '#2d1b69']} style={StyleSheet.absoluteFill} />
-      
+
+      {/* Processing Purchase Modal */}
+      <Modal
+        visible={processingPurchase}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.processingModal}>
+          <View style={styles.processingContent}>
+            <LottieView
+              source={require('../assets/animations/Artist.json')}
+              autoPlay
+              loop
+              style={styles.processingAnimation}
+            />
+            <Text style={styles.processingTitle}>Activating Premium...</Text>
+            <Text style={styles.processingSubtitle}>Please wait while we set up your account</Text>
+          </View>
+        </View>
+      </Modal>
+
       {/* Close Button */}
       <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
         <Ionicons name="close" size={28} color="#FFF" />
@@ -251,6 +315,33 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     color: '#FFF',
+  },
+  processingModal: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  processingContent: {
+    alignItems: 'center',
+    padding: 32,
+  },
+  processingAnimation: {
+    width: 250,
+    height: 250,
+  },
+  processingTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFF',
+    marginTop: 24,
+    textAlign: 'center',
+  },
+  processingSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 8,
+    textAlign: 'center',
   },
   closeButton: {
     position: 'absolute',

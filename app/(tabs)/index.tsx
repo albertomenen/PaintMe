@@ -19,7 +19,6 @@ import {
   NativeSyntheticEvent,
   Modal,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import ConfettiCannon from 'react-native-confetti-cannon';
 
 import { ARTIST_STYLES, ArtistStyle, ANIME_STYLES, AnimeStyle } from '../../constants/Config';
@@ -62,7 +61,6 @@ export default function TransformScreen() {
   const [imageAutoSaved, setImageAutoSaved] = useState(false);
 
   const [, forceUpdate] = React.useReducer(x => x + 1, 0);
-  const [localCredits, setLocalCredits] = useState<number | null>(null);
   const [showResultModal, setShowResultModal] = useState(false);
   const [showCreditsPaywall, setShowCreditsPaywall] = useState(false);
   const [showSubscriptionPaywall, setShowSubscriptionPaywall] = useState(false);
@@ -79,28 +77,14 @@ export default function TransformScreen() {
     });
   }, [user?.imageGenerationsRemaining, user?.id, user?.credits, loading, updateTrigger]);
 
+  // Refresh user data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      const checkCreditsFromStorage = async () => {
-        try {
-          const storedCredits = await AsyncStorage.getItem('user_credits');
-          if (storedCredits) {
-            const credits = parseInt(storedCredits);
-            console.log('📱 INDEX - Found credits in AsyncStorage:', credits);
-            setLocalCredits(credits);
-            forceUpdate();
-          } else {
-            console.log('📱 INDEX - No credits in AsyncStorage, using user data');
-            setLocalCredits(null);
-            forceUpdate();
-          }
-        } catch (error) {
-          console.log('📱 INDEX - Error reading AsyncStorage:', error);
-        }
-      };
-
-      checkCreditsFromStorage();
-    }, [])
+      console.log('🏠 INDEX - Screen focused, refreshing user data');
+      if (user) {
+        refreshUser();
+      }
+    }, [user?.id])
   );
 
   const handleArtistScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -220,7 +204,8 @@ export default function TransformScreen() {
       return;
     }
 
-    if (!user || user.imageGenerationsRemaining <= 0) {
+    // Check if user can transform (premium users have unlimited, non-premium need credits)
+    if (!canTransform()) {
       Alert.alert('Sin generaciones', 'Necesitas comprar más generaciones para crear transformaciones.');
       return;
     }
@@ -283,8 +268,13 @@ export default function TransformScreen() {
           transformedImageUrl: result.imageUrl
         });
 
-        await decrementImageGenerations();
-        console.log('🏠 INDEX: Credits decremented after transformation');
+        // Only decrement credits for non-premium users
+        if (!user.isPremium) {
+          await decrementImageGenerations();
+          console.log('🏠 INDEX: Credits decremented after transformation');
+        } else {
+          console.log('🏠 INDEX: Premium user - no credits decremented');
+        }
 
         // Refresh user data to update gallery and credits display
         console.log('🔄 Refreshing user data to sync gallery...');
@@ -475,7 +465,7 @@ export default function TransformScreen() {
               <Ionicons name="images" size={24} color="#FFF" />
               <View style={styles.creditsButtonTextContainer}>
                 <Text style={styles.creditsButtonNumber}>
-                  {localCredits !== null ? localCredits : (user?.imageGenerationsRemaining || 0)}
+                  {user?.imageGenerationsRemaining || 0}
                 </Text>
                 <Text style={styles.creditsButtonLabel}>
                   transformaciones restantes
@@ -486,17 +476,30 @@ export default function TransformScreen() {
         </View>
       )}
 
-      {/* Premium Badge */}
+      {/* Premium Badge - VERY PROMINENT */}
       {user?.isPremium && (
         <View style={styles.premiumBadgeContainer}>
-          <View style={styles.premiumBadgeLarge}>
+          <TouchableOpacity
+            style={styles.premiumBadgeLarge}
+            onPress={() => router.push('/(tabs)/profile')}
+            activeOpacity={0.9}>
             <LinearGradient
-              colors={['#FFD700', '#FFA500']}
-              style={styles.premiumBadgeGradient}>
-              <Ionicons name="star" size={24} color="#FFF" />
-              <Text style={styles.premiumTextLarge}>Premium - Transformaciones Ilimitadas</Text>
+              colors={['#FFD700', '#FFA500', '#FF6B6B']}
+              style={styles.premiumBadgeGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}>
+              <View style={styles.premiumBadgeContent}>
+                <View style={styles.premiumIconContainer}>
+                  <Ionicons name="star" size={28} color="#FFF" />
+                  <View style={styles.premiumPulse} />
+                </View>
+                <View style={styles.premiumTextContainer}>
+                  <Text style={styles.premiumTextLarge}>✨ PREMIUM ACTIVE</Text>
+                  <Text style={styles.premiumSubtext}>∞ Unlimited Transformations</Text>
+                </View>
+              </View>
             </LinearGradient>
-          </View>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -930,29 +933,61 @@ const styles = StyleSheet.create({
   },
   premiumBadgeContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 8,
+    paddingBottom: 12,
   },
   premiumBadgeLarge: {
-    borderRadius: 14,
+    borderRadius: 20,
     overflow: 'hidden',
     shadowColor: '#FFD700',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.6,
+    shadowRadius: 16,
+    elevation: 12,
   },
   premiumBadgeGradient: {
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+  },
+  premiumBadgeContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 16,
+  },
+  premiumIconContainer: {
+    position: 'relative',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    gap: 10,
+    alignItems: 'center',
+  },
+  premiumPulse: {
+    position: 'absolute',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    opacity: 0.5,
+  },
+  premiumTextContainer: {
+    flex: 1,
   },
   premiumTextLarge: {
-    fontSize: 14,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#FFF',
+    marginBottom: 4,
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  premiumSubtext: {
+    fontSize: 14,
+    color: '#FFF',
+    opacity: 0.95,
+    fontWeight: '600',
   },
   titleContainer: {
     paddingHorizontal: 24,

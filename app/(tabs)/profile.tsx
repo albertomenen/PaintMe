@@ -26,7 +26,8 @@ import { useI18n } from '../../hooks/useI18n';
 import RevenueCatPaywall from '../../components/RevenueCatPaywall';
 
 export default function ProfileScreen() {
-  const { user, addImageGenerations, transformations, updateTrigger, refreshUser } = useUser();
+  const { user, addImageGenerations, transformations, updateTrigger, refreshUser, updatePremiumStatus } = useUser();
+  const { signOut } = useAuth();
   const { t } = useI18n();
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
@@ -103,7 +104,6 @@ useEffect(() => {
   }
 }, [user?.id, user]);
 
-  const { signOut } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [offerings, setOfferings] = useState<PurchasesPackage[]>([]);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
@@ -130,14 +130,6 @@ useEffect(() => {
         console.log('🏪 PROFILE: Attempting to add credits:', credits);
         await addImageGenerations(credits);
         console.log('🏪 PROFILE: Credits added successfully via Profile purchase');
-        
-        // Force immediate UI update in profile
-        forceUpdate();
-        
-        // FORCE SYNC: Store credits in AsyncStorage for index to read
-        const newTotal = (user?.imageGenerationsRemaining || 0) + credits;
-        await AsyncStorage.setItem('user_credits', newTotal.toString());
-        console.log('💾 Stored credits in AsyncStorage:', newTotal);
 
         // Actualizar customer info local
         setCustomerInfo(result.customerInfo);
@@ -145,6 +137,9 @@ useEffect(() => {
         // Refresh user data from database to ensure UI is in sync
         console.log('🔄 Refreshing user data from database...');
         await refreshUser();
+
+        // Force immediate UI update in profile AFTER refresh
+        forceUpdate();
 
         Alert.alert(
           `🎉 ${t('profile.purchase.successTitle')}`,
@@ -337,6 +332,66 @@ useEffect(() => {
     );
   };
 
+  // DEBUG: Reset RevenueCat for testing
+  const handleResetRevenueCat = async () => {
+    Alert.alert(
+      '🔧 Debug: Reset RevenueCat',
+      'This will logout from RevenueCat and clear premium status. App will reload. Only use for testing!',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset & Reload',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+
+              console.log('🔄 Step 1: Clearing premium status in database...');
+              if (updatePremiumStatus) {
+                await updatePremiumStatus(false, null);
+              }
+
+              console.log('🔄 Step 2: Logging out from RevenueCat...');
+              const Purchases = require('react-native-purchases').default;
+              await Purchases.logOut();
+
+              console.log('🔄 Step 3: Getting current user...');
+              const { data: { user: currentUser } } = await supabase.auth.getUser();
+
+              if (currentUser) {
+                console.log('🔄 Step 4: Re-logging into RevenueCat with user ID...');
+                await Purchases.logIn(currentUser.id);
+              }
+
+              console.log('🔄 Step 5: Refreshing user data...');
+              await refreshUser();
+
+              setIsLoading(false);
+
+              Alert.alert(
+                '✅ Reset Complete',
+                'RevenueCat has been reset. Premium status cleared. Please restart the app for full effect.',
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => {
+                      // Force a complete refresh
+                      forceUpdate();
+                    }
+                  }
+                ]
+              );
+            } catch (error) {
+              console.error('❌ Error resetting RevenueCat:', error);
+              setIsLoading(false);
+              Alert.alert('Error', 'Failed to reset RevenueCat: ' + (error as any).message);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   // Renderizar paquetes de RevenueCat
   const renderRevenueCatPackage = (packageItem: PurchasesPackage, popular?: boolean) => {
     const packageData = CREDIT_PACKAGES.find(p => p.identifier === packageItem.product.identifier);
@@ -416,8 +471,6 @@ useEffect(() => {
 
   // Renderizar suscripción activa
   const renderActiveSubscription = () => {
-    if (!subscriptionInfo.isActive || !subscriptionInfo.productId) return null;
-
     const subPackage = SUBSCRIPTION_PACKAGES.find(
       p => p.identifier === subscriptionInfo.productId || p.productId === subscriptionInfo.productId
     );
@@ -428,23 +481,33 @@ useEffect(() => {
 
     return (
       <View style={styles.activeSubscriptionCard}>
-        <View style={styles.activeBadge}>
-          <ThemedText style={styles.activeBadgeText}>{t('profile.subscription.activeBadge')}</ThemedText>
-        </View>
-        <View style={styles.activeSubContent}>
-          <Ionicons name="star" size={40} color="#FFD700" />
-          <ThemedText style={styles.activeSubTitle}>{t('profile.subscription.activeTitle')}</ThemedText>
-          <ThemedText style={styles.activeSubDescription}>
-            {t('profile.subscription.activeDescription')}
-          </ThemedText>
-          <ThemedText style={styles.activeSubPeriod}>{periodText}</ThemedText>
-          {subscriptionInfo.expirationDate && (
-            <ThemedText style={styles.activeSubExpiry}>
-              {subscriptionInfo.willRenew ? t('profile.subscription.renewsOn') : t('profile.subscription.expiresOn')}:{' '}
-              {new Date(subscriptionInfo.expirationDate).toLocaleDateString()}
+        <LinearGradient
+          colors={['#FFD700', '#FFA500', '#FF6B6B']}
+          style={styles.activeSubGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}>
+          <View style={styles.activeBadge}>
+            <ThemedText style={styles.activeBadgeText}>✨ ACTIVE</ThemedText>
+          </View>
+          <View style={styles.activeSubContent}>
+            <Ionicons name="star" size={60} color="#FFF" />
+            <ThemedText style={styles.activeSubTitle}>🎨 PREMIUM ACTIVE</ThemedText>
+            <ThemedText style={styles.activeSubDescription}>
+              Unlimited Transformations • All Styles • Priority Processing
             </ThemedText>
-          )}
-        </View>
+            {subscriptionInfo.isActive && subscriptionInfo.productId && (
+              <>
+                <ThemedText style={styles.activeSubPeriod}>{periodText}</ThemedText>
+                {subscriptionInfo.expirationDate && (
+                  <ThemedText style={styles.activeSubExpiry}>
+                    {subscriptionInfo.willRenew ? '🔄 Renews on' : '⚠️ Expires on'}:{' '}
+                    {new Date(subscriptionInfo.expirationDate).toLocaleDateString()}
+                  </ThemedText>
+                )}
+              </>
+            )}
+          </View>
+        </LinearGradient>
       </View>
     );
   };
@@ -536,14 +599,24 @@ useEffect(() => {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <LinearGradient
-        colors={['#667eea', '#764ba2']}
+        colors={user?.isPremium ? ['#FFD700', '#FFA500'] : ['#667eea', '#764ba2']}
         style={styles.header}
       >
         <View style={styles.profileInfo}>
           <View style={styles.avatar}>
-            <Ionicons name="person" size={40} color="white" />
+            {user?.isPremium ? (
+              <Ionicons name="star" size={40} color="white" />
+            ) : (
+              <Ionicons name="person" size={40} color="white" />
+            )}
           </View>
           <ThemedText style={styles.userEmail}>{user?.email || t('common.loading')}</ThemedText>
+          {user?.isPremium && (
+            <View style={styles.premiumHeaderBadge}>
+              <Ionicons name="star" size={16} color="#FFD700" />
+              <ThemedText style={styles.premiumHeaderText}>PREMIUM MEMBER</ThemedText>
+            </View>
+          )}
           <ThemedText style={styles.memberSince}>
             {t('profile.header.memberSince')} {user ? new Date(user.createdAt).toLocaleDateString() : '...'}
           </ThemedText>
@@ -744,6 +817,16 @@ useEffect(() => {
           </TouchableOpacity>
         )}
 
+        {/* DEBUG: Reset RevenueCat Button - Only for testing */}
+        {__DEV__ && (
+          <TouchableOpacity
+            style={[styles.signOutButton, { backgroundColor: '#FFA500', marginBottom: 12 }]}
+            onPress={handleResetRevenueCat}>
+            <Ionicons name="bug" size={20} color="#FFF" />
+            <ThemedText style={[styles.signOutText, { color: '#FFF' }]}>🔧 Reset RevenueCat (Debug)</ThemedText>
+          </TouchableOpacity>
+        )}
+
         {/* Sign Out Button - Prominente */}
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
           <Ionicons name="log-out" size={20} color="#FF6B6B" />
@@ -866,6 +949,22 @@ const styles = StyleSheet.create({
   memberSince: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.8)',
+  },
+  premiumHeaderBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+    marginVertical: 8,
+  },
+  premiumHeaderText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FFD700',
+    letterSpacing: 1,
   },
   content: {
     flex: 1,
@@ -1071,59 +1170,72 @@ const styles = StyleSheet.create({
   },
   // Subscription styles
   activeSubscriptionCard: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 20,
+    borderRadius: 20,
     marginBottom: 20,
-    borderWidth: 2,
-    borderColor: '#FFD700',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.6,
+    shadowRadius: 16,
+    elevation: 12,
+    overflow: 'hidden',
+  },
+  activeSubGradient: {
+    padding: 30,
+    borderRadius: 20,
   },
   activeBadge: {
     position: 'absolute',
     top: 0,
     right: 0,
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderBottomLeftRadius: 10,
-    borderTopRightRadius: 13,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomLeftRadius: 12,
+    borderTopRightRadius: 18,
   },
   activeBadgeText: {
     color: 'white',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: 'bold',
+    letterSpacing: 1.5,
   },
   activeSubContent: {
     alignItems: 'center',
     marginTop: 10,
   },
   activeSubTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#2c3e50',
-    marginTop: 10,
+    color: '#FFF',
+    marginTop: 16,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   activeSubDescription: {
     fontSize: 16,
-    color: '#666',
-    marginTop: 5,
+    color: '#FFF',
+    marginTop: 12,
     textAlign: 'center',
+    lineHeight: 22,
+    opacity: 0.95,
   },
   activeSubPeriod: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#667eea',
-    marginTop: 10,
+    color: '#FFF',
+    marginTop: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
   activeSubExpiry: {
     fontSize: 14,
-    color: '#999',
-    marginTop: 5,
+    color: '#FFF',
+    marginTop: 10,
+    opacity: 0.9,
   },
   subscriptionPackage: {
     backgroundColor: 'white',

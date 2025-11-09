@@ -31,20 +31,36 @@ export function useUser() {
   const [loading, setLoading] = useState(true);
   const [transformations, setTransformations] = useState<Transformation[]>([]);
   const [updateTrigger, setUpdateTrigger] = useState(0);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
+
       if (session?.user) {
-        loadUserProfile(session.user);
+        loadUserProfile(session.user).finally(() => {
+          if (isMounted) setIsInitialized(true);
+        });
       } else {
         setLoading(false);
+        setIsInitialized(true);
       }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!isMounted) return;
+
+        // Skip initial SIGNED_IN event if we already initialized
+        if (event === 'SIGNED_IN' && !isInitialized) {
+          console.log('⏭️ Skipping duplicate SIGNED_IN event - already initialized');
+          return;
+        }
+
         if (session?.user) {
           await loadUserProfile(session.user);
         } else {
@@ -55,12 +71,19 @@ export function useUser() {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
   
 
   const loadUserProfile = async (authUser: SupabaseUser) => {
+    console.log('🔄 Loading user profile for:', authUser.id);
+
     try {
+      setLoading(true);
+
       // First, check if user profile exists
       let { data: profile, error } = await supabase
         .from('users')
@@ -70,11 +93,14 @@ export function useUser() {
 
       if (error && error.code === 'PGRST116') {
         // User doesn't exist, create profile
+        console.log('🆕 Creating new user profile...');
         const newUser = {
           id: authUser.id,
           email: authUser.email!,
           credits: 1, // Give new users 1 free credit
+          image_generations_remaining: 1,
           total_transformations: 0,
+          is_premium: false,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
@@ -86,13 +112,16 @@ export function useUser() {
           .single();
 
         if (insertError) {
-          console.error('Error creating user profile:', insertError);
+          console.error('❌ Error creating user profile:', insertError);
+          setLoading(false);
           return;
         }
 
         profile = data;
+        console.log('✅ New user profile created');
       } else if (error) {
-        console.error('Error loading user profile:', error);
+        console.error('❌ Error loading user profile:', error);
+        setLoading(false);
         return;
       }
 
@@ -102,7 +131,8 @@ export function useUser() {
         email: profile.email,
         credits: profile.credits,
         image_generations_remaining: profile.image_generations_remaining,
-        total_transformations: profile.total_transformations
+        total_transformations: profile.total_transformations,
+        is_premium: profile.is_premium
       });
 
       // Convert snake_case to camelCase for our interface
@@ -129,8 +159,10 @@ export function useUser() {
 
       // Load user transformations
       await loadTransformations(authUser.id);
+
+      console.log('✅ User profile fully loaded');
     } catch (error) {
-      console.error('Error in loadUserProfile:', error);
+      console.error('❌ Error in loadUserProfile:', error);
     } finally {
       setLoading(false);
     }
@@ -229,7 +261,15 @@ export function useUser() {
   };
 
   const decrementImageGenerations = async () => {
-    if (!user || user.imageGenerationsRemaining <= 0) return;
+    if (!user) return;
+
+    // Premium users don't consume credits
+    if (user.isPremium) {
+      console.log('✨ Premium user - skipping credit decrement');
+      return;
+    }
+
+    if (user.imageGenerationsRemaining <= 0) return;
 
     const newTotal = user.imageGenerationsRemaining - 1;
     console.log('🔄 Decrementing generations from', user.imageGenerationsRemaining, 'to', newTotal);
@@ -368,6 +408,51 @@ export function useUser() {
     return hasCredits;
   };
 
+  const updatePremiumStatus = async (isPremium: boolean, subscriptionType?: string) => {
+    if (!user) return;
+
+    console.log('🔄 Updating premium status:', isPremium, subscriptionType);
+
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update({
+          is_premium: isPremium,
+          subscription_type: subscriptionType || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id)
+        .select('is_premium, subscription_type')
+        .single();
+
+      if (error) {
+        console.error('❌ Failed to update premium status:', error);
+        return;
+      }
+
+      console.log('✅ Premium status updated in database:', data);
+
+      // Update local state
+      setUser(prev => prev ? {
+        ...prev,
+        isPremium: data.is_premium ?? false,
+        subscriptionType: data.subscription_type
+      } : null);
+
+      // Trigger update for all components
+      setUpdateTrigger(prev => prev + 1);
+
+      console.log('✅ Local premium state updated');
+
+    } catch (error) {
+      console.error('❌ Error updating premium status:', error);
+    }
+  };
+
+  const forceUpdate = () => {
+    setUpdateTrigger(prev => prev + 1);
+  };
+
   return {
     user,
     loading,
@@ -380,13 +465,24 @@ export function useUser() {
     hasCredits,
     canTransform,
     updateTrigger,
-    refreshUser: () => {
-      if (user?.id) {
-        supabase.auth.getUser().then(({ data: { user: authUser } }) => {
-          if (authUser) {
-            loadUserProfile(authUser);
-          }
-        });
+    updatePremiumStatus,
+    forceUpdate,
+    refreshUser: async () => {
+      console.log('🔄 Manually refreshing user data...');
+
+      // Always try to get the auth user, even if local state doesn't have it
+      const { data: { user: authUser }, error } = await supabase.auth.getUser();
+
+      if (error) {
+        console.error('❌ Error getting auth user:', error);
+        return;
+      }
+
+      if (authUser) {
+        await loadUserProfile(authUser);
+        console.log('✅ User data refreshed');
+      } else {
+        console.warn('⚠️ No authenticated user found');
       }
     },
   };

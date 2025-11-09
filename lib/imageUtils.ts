@@ -10,9 +10,9 @@ export interface ImageUploadResult {
 
 // Cloudinary configuration for real image uploads
 const CLOUDINARY_CONFIG = {
-  cloudName: 'demo', // Replace with your Cloudinary cloud name
-  uploadPreset: 'ml_default', // Replace with your upload preset
-  apiUrl: 'https://api.cloudinary.com/v1_1/demo/image/upload' // Replace 'demo' with your cloud name
+  cloudName: 'dlor5extv',
+  uploadPreset: 'paintme_mobile', // You need to create this in Cloudinary dashboard (Settings -> Upload -> Add upload preset -> Unsigned)
+  apiUrl: 'https://api.cloudinary.com/v1_1/dlor5extv/image/upload'
 };
 
 export class ImageUtils {
@@ -28,10 +28,8 @@ export class ImageUtils {
       // For file URIs from mobile devices, we need to read and upload the file
       if (localUri.startsWith('file://') || localUri.startsWith('content://')) {
         console.log('📁 Mobile file URI detected, uploading to public cloud storage');
-        
+
         try {
-          console.log('☁️ Uploading to free image hosting service...');
-          
           // Create FormData for mobile file upload
           const formData = new FormData();
           formData.append('file', {
@@ -40,8 +38,46 @@ export class ImageUtils {
             name: 'image.jpg',
           } as any);
 
-          // Try uploading to file.io (free temporary file hosting)
+          // PRIMARY: Try Cloudinary first (most reliable)
           try {
+            console.log('☁️ Uploading to Cloudinary...');
+
+            const cloudinaryFormData = new FormData();
+            cloudinaryFormData.append('file', {
+              uri: localUri,
+              type: 'image/jpeg',
+              name: 'image.jpg',
+            } as any);
+            cloudinaryFormData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
+
+            const response = await fetch(CLOUDINARY_CONFIG.apiUrl, {
+              method: 'POST',
+              body: cloudinaryFormData,
+            });
+
+            if (response.ok) {
+              const result = await response.json();
+              console.log('📋 Cloudinary response:', result);
+
+              if (result.secure_url) {
+                console.log('✅ Image uploaded successfully to Cloudinary:', result.secure_url);
+                return {
+                  success: true,
+                  url: result.secure_url,
+                };
+              }
+            } else {
+              const errorText = await response.text();
+              console.log('❌ Cloudinary upload failed with status:', response.status);
+              console.log('❌ Cloudinary error:', errorText);
+            }
+          } catch (cloudinaryError) {
+            console.log('❌ Cloudinary upload failed:', cloudinaryError);
+          }
+
+          // FALLBACK 1: Try uploading to file.io (free temporary file hosting)
+          try {
+            console.log('☁️ Trying file.io as fallback...');
             const response = await fetch('https://file.io/', {
               method: 'POST',
               body: formData,
@@ -53,13 +89,13 @@ export class ImageUtils {
             if (response.ok) {
               const responseText = await response.text();
               console.log('📋 File.io raw response length:', responseText.length);
-              
+
               try {
                 const result = JSON.parse(responseText);
                 console.log('📋 File.io parsed response:', result);
-                
+
                 if (result.success && result.link) {
-                  console.log('✅ Image uploaded successfully to public URL:', result.link);
+                  console.log('✅ Image uploaded successfully to file.io:', result.link);
                   return {
                     success: true,
                     url: result.link,
@@ -78,6 +114,7 @@ export class ImageUtils {
 
           // Alternative: Try uploading to 0x0.st (another free service)
           try {
+            console.log('☁️ Trying 0x0.st as fallback...');
             const response = await fetch('https://0x0.st', {
               method: 'POST',
               body: formData,
@@ -85,31 +122,66 @@ export class ImageUtils {
 
             if (response.ok) {
               const publicUrl = await response.text();
-              if (publicUrl && publicUrl.startsWith('https://')) {
-                console.log('✅ Image uploaded successfully to 0x0.st:', publicUrl.trim());
+              console.log('📋 0x0.st response:', publicUrl);
+
+              if (publicUrl && publicUrl.trim().startsWith('https://')) {
+                const cleanUrl = publicUrl.trim();
+                console.log('✅ Image uploaded successfully to 0x0.st:', cleanUrl);
                 return {
                   success: true,
-                  url: publicUrl.trim(),
+                  url: cleanUrl,
                 };
+              } else {
+                console.log('❌ 0x0.st returned invalid URL:', publicUrl);
               }
+            } else {
+              console.log('❌ 0x0.st upload failed with status:', response.status);
             }
           } catch (zeroError) {
             console.log('❌ 0x0.st upload failed:', zeroError);
           }
 
-          // If all cloud uploads fail, read as base64 (fallback)
-          console.log('⚠️ All cloud uploads failed, falling back to base64');
-          const base64 = await FileSystem.readAsStringAsync(localUri, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-          
-          const dataUrl = `data:image/jpeg;base64,${base64}`;
-          console.log('📋 Created data URL fallback, length:', dataUrl.length);
-          console.log('⚠️ Using base64 data URL (Replicate may not accept this)');
-          
+          // Alternative 3: Try uguu.se (another reliable free service)
+          try {
+            console.log('☁️ Trying uguu.se as fallback...');
+            const uguuFormData = new FormData();
+            uguuFormData.append('files[]', {
+              uri: localUri,
+              type: 'image/jpeg',
+              name: 'image.jpg',
+            } as any);
+
+            const response = await fetch('https://uguu.se/upload', {
+              method: 'POST',
+              body: uguuFormData,
+            });
+
+            if (response.ok) {
+              const result = await response.json();
+              console.log('📋 uguu.se response:', result);
+
+              if (result.success && result.files && result.files[0] && result.files[0].url) {
+                const publicUrl = result.files[0].url;
+                console.log('✅ Image uploaded successfully to uguu.se:', publicUrl);
+                return {
+                  success: true,
+                  url: publicUrl,
+                };
+              }
+            } else {
+              console.log('❌ uguu.se upload failed with status:', response.status);
+            }
+          } catch (uguuError) {
+            console.log('❌ uguu.se upload failed:', uguuError);
+          }
+
+          // If all cloud uploads fail, return error
+          console.error('❌ All cloud upload services failed (file.io, 0x0.st, uguu.se)');
+          console.error('⚠️ Image upload is required for transformation');
+
           return {
-            success: true,
-            url: dataUrl,
+            success: false,
+            error: 'Unable to upload image to cloud. Please try again or check your internet connection.',
           };
           
         } catch (error) {

@@ -107,12 +107,13 @@ function AppContent() {
 
         console.log('✅ RevenueCat configurado exitosamente');
 
-        // Agregar listener automático para compras
+        // Agregar listener automático para compras y suscripciones
         let lastProcessedTransactionId: string | null = null;
+        let lastProcessedSubscriptionStatus: boolean | null = null;
         let listenerProcessing = false;
 
         Purchases.addCustomerInfoUpdateListener(async (customerInfo) => {
-          console.log('🔔 LISTENER: Customer Info Updated - Checking for new purchases...');
+          console.log('🔔 LISTENER: Customer Info Updated - Checking for changes...');
           console.log('🔔 LISTENER: Currently processing?', listenerProcessing);
 
           if (listenerProcessing) {
@@ -123,22 +124,82 @@ function AppContent() {
           listenerProcessing = true;
 
           try {
+            // DEBUG: Log all entitlements
+            console.log('🔍 LISTENER: All active entitlements:', Object.keys(customerInfo.entitlements.active));
+            console.log('🔍 LISTENER: All entitlements:', Object.keys(customerInfo.entitlements.all));
+
+            // Check for premium subscription status - support multiple entitlement names
+            const premiumEntitlementKey = Object.keys(customerInfo.entitlements.active).find(
+              key => ['premium', 'Weekly subscription', 'Monthly Access'].includes(key)
+            );
+            const hasPremiumEntitlement = premiumEntitlementKey !== undefined;
+            console.log('👑 LISTENER: Premium entitlement status:', hasPremiumEntitlement, 'Key:', premiumEntitlementKey);
+
+            if (hasPremiumEntitlement !== lastProcessedSubscriptionStatus) {
+              console.log('🎯 LISTENER: Subscription status changed!', lastProcessedSubscriptionStatus, '->', hasPremiumEntitlement);
+
+              if (hasPremiumEntitlement && premiumEntitlementKey && (global as any).updatePremiumStatusGlobal) {
+                try {
+                  const activeEntitlement = customerInfo.entitlements.active[premiumEntitlementKey];
+                  const subscriptionType = activeEntitlement?.productIdentifier || 'premium';
+
+                  await (global as any).updatePremiumStatusGlobal(true, subscriptionType);
+                  console.log('✅ LISTENER: Premium status updated successfully!');
+                  lastProcessedSubscriptionStatus = true;
+                } catch (error) {
+                  console.error('❌ LISTENER: Failed to update premium status:', error);
+                }
+              } else if (!hasPremiumEntitlement && lastProcessedSubscriptionStatus === true && (global as any).updatePremiumStatusGlobal) {
+                // Only update to false if we previously had premium (was true)
+                // Don't update if status was null (never had premium) or already false
+                try {
+                  await (global as any).updatePremiumStatusGlobal(false);
+                  console.log('✅ LISTENER: Premium status removed (subscription expired)');
+                  lastProcessedSubscriptionStatus = false;
+                } catch (error) {
+                  console.error('❌ LISTENER: Failed to remove premium status:', error);
+                }
+              } else if (!hasPremiumEntitlement && lastProcessedSubscriptionStatus === null) {
+                // First time checking and no premium - just update the flag without DB update
+                console.log('ℹ️ LISTENER: User never had premium, skipping DB update');
+                lastProcessedSubscriptionStatus = false;
+              }
+            }
+
+            // Check for credit purchases (non-subscription transactions)
             const recentTransactions = customerInfo.nonSubscriptionTransactions;
             console.log('🔔 LISTENER: Transaction count:', recentTransactions.length);
 
             if (recentTransactions.length > 0) {
               const latestTransaction = recentTransactions[0];
 
+              // Check if transaction was already processed
               if (lastProcessedTransactionId === latestTransaction.transactionIdentifier) {
                 console.log('⏭️ LISTENER: Transaction already processed, skipping...');
                 return;
               }
 
-              console.log('💰 LISTENER: New transaction detected:', {
+              // IMPORTANT: Only process recent transactions (within last 5 minutes)
+              // This prevents processing old transactions when listener first initializes
+              const transactionDate = new Date(latestTransaction.purchaseDate);
+              const now = new Date();
+              const timeDiffMinutes = (now.getTime() - transactionDate.getTime()) / (1000 * 60);
+
+              console.log('💰 LISTENER: Transaction check:', {
                 productId: latestTransaction.productIdentifier,
                 transactionId: latestTransaction.transactionIdentifier,
-                purchaseDate: latestTransaction.purchaseDate
+                purchaseDate: latestTransaction.purchaseDate,
+                minutesAgo: Math.round(timeDiffMinutes)
               });
+
+              // Only process transactions from the last 5 minutes
+              if (timeDiffMinutes > 5) {
+                console.log('⏭️ LISTENER: Transaction too old (', Math.round(timeDiffMinutes), 'minutes), marking as processed without adding credits');
+                lastProcessedTransactionId = latestTransaction.transactionIdentifier;
+                return;
+              }
+
+              console.log('✅ LISTENER: Recent transaction detected - processing...');
 
               const packageData = CREDIT_PACKAGES.find(p => p.identifier === latestTransaction.productIdentifier);
               if (packageData) {
@@ -164,6 +225,7 @@ function AppContent() {
 
               } else {
                 console.warn('⚠️ LISTENER: No credit package found for product:', latestTransaction.productIdentifier);
+                lastProcessedTransactionId = latestTransaction.transactionIdentifier;
               }
             } else {
               console.log('🔔 LISTENER: No transactions to process');
@@ -175,7 +237,7 @@ function AppContent() {
           }
         });
 
-        // Obtener customer info
+        // Obtener customer info y sincronizar estado premium
         let customerInfo;
         try {
           console.log('🔍 Obteniendo customer info para sincronización...');
@@ -186,6 +248,24 @@ function AppContent() {
             activeEntitlements: Object.keys(customerInfo.entitlements.active),
             nonSubscriptionTransactions: customerInfo.nonSubscriptionTransactions.length,
           });
+
+          // Sync premium status on app start - support multiple entitlement names
+          const premiumEntitlementKey = Object.keys(customerInfo.entitlements.active).find(
+            key => ['premium', 'Weekly subscription', 'Monthly Access'].includes(key)
+          );
+          const hasPremiumEntitlement = premiumEntitlementKey !== undefined;
+          console.log('👑 Initial premium status check:', hasPremiumEntitlement, 'Key:', premiumEntitlementKey);
+
+          if (hasPremiumEntitlement && premiumEntitlementKey && (global as any).updatePremiumStatusGlobal) {
+            try {
+              const activeEntitlement = customerInfo.entitlements.active[premiumEntitlementKey];
+              const subscriptionType = activeEntitlement?.productIdentifier || 'premium';
+              await (global as any).updatePremiumStatusGlobal(true, subscriptionType);
+              console.log('✅ Premium status synced on app start');
+            } catch (error) {
+              console.error('❌ Failed to sync premium status on start:', error);
+            }
+          }
 
           // Obtener offerings
           try {
@@ -326,6 +406,62 @@ function AppContent() {
           Analytics.identifyUser(session.user.id, session.user.email);
           Analytics.trackUserSignIn('apple');
 
+          // Identify user in RevenueCat to sync purchases
+          (async () => {
+            try {
+              await Purchases.logIn(session.user.id);
+              console.log('✅ User identified in RevenueCat:', session.user.id);
+
+              // Get customer info and sync premium status
+              const customerInfo = await Purchases.getCustomerInfo();
+              console.log('📋 Customer info after login:', {
+                activeEntitlements: Object.keys(customerInfo.entitlements.active),
+                allEntitlements: Object.keys(customerInfo.entitlements.all)
+              });
+
+              const premiumEntitlementKey = Object.keys(customerInfo.entitlements.active).find(
+                key => ['premium', 'Weekly subscription', 'Monthly Access'].includes(key)
+              );
+
+              if (premiumEntitlementKey && (global as any).updatePremiumStatusGlobal) {
+                const activeEntitlement = customerInfo.entitlements.active[premiumEntitlementKey];
+                const subscriptionType = activeEntitlement?.productIdentifier || 'premium';
+                console.log('🔄 Syncing premium status on login:', true, subscriptionType);
+                await (global as any).updatePremiumStatusGlobal(true, subscriptionType);
+              } else {
+                console.log('⚠️ No active premium entitlements found after login');
+
+                // Try to restore purchases to sync any subscriptions from anonymous user
+                console.log('🔄 Attempting to restore purchases...');
+                try {
+                  const restoredInfo = await Purchases.restorePurchases();
+                  console.log('📋 Restored customer info:', {
+                    activeEntitlements: Object.keys(restoredInfo.entitlements.active),
+                    allEntitlements: Object.keys(restoredInfo.entitlements.all)
+                  });
+
+                  // Check again for premium entitlements after restore
+                  const restoredPremiumKey = Object.keys(restoredInfo.entitlements.active).find(
+                    key => ['premium', 'Weekly subscription', 'Monthly Access'].includes(key)
+                  );
+
+                  if (restoredPremiumKey && (global as any).updatePremiumStatusGlobal) {
+                    const restoredEntitlement = restoredInfo.entitlements.active[restoredPremiumKey];
+                    const subscriptionType = restoredEntitlement?.productIdentifier || 'premium';
+                    console.log('✅ Premium entitlement restored! Syncing to database:', true, subscriptionType);
+                    await (global as any).updatePremiumStatusGlobal(true, subscriptionType);
+                  } else {
+                    console.log('ℹ️ No premium entitlements found after restore - user is not premium');
+                  }
+                } catch (restoreError) {
+                  console.error('❌ Failed to restore purchases:', restoreError);
+                }
+              }
+            } catch (error) {
+              console.error('❌ Error identifying user in RevenueCat:', error);
+            }
+          })();
+
         } else if (event === 'SIGNED_OUT') {
           console.log('🔓 User signed out');
           setIsAuthenticated(false);
@@ -380,9 +516,9 @@ function AppContent() {
   );
 }
 
-// Component that exposes addImageGenerations globally for RevenueCat listener
+// Component that exposes addImageGenerations and updatePremiumStatus globally for RevenueCat listener
 function AppProvider({ children }: { children: React.ReactNode }) {
-  const { addImageGenerations } = useUser();
+  const { addImageGenerations, updatePremiumStatus, forceUpdate } = useUser();
 
   React.useEffect(() => {
     if (addImageGenerations) {
@@ -390,10 +526,22 @@ function AppProvider({ children }: { children: React.ReactNode }) {
       console.log('🌐 Global addImageGenerations function registered');
     }
 
+    if (updatePremiumStatus) {
+      (global as any).updatePremiumStatusGlobal = updatePremiumStatus;
+      console.log('🌐 Global updatePremiumStatus function registered');
+    }
+
+    if (forceUpdate) {
+      (global as any).forceUserUpdate = forceUpdate;
+      console.log('🌐 Global forceUserUpdate function registered');
+    }
+
     return () => {
       delete (global as any).addImageGenerationsGlobal;
+      delete (global as any).updatePremiumStatusGlobal;
+      delete (global as any).forceUserUpdate;
     };
-  }, [addImageGenerations]);
+  }, [addImageGenerations, updatePremiumStatus, forceUpdate]);
 
   return <>{children}</>;
 }
